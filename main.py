@@ -9,14 +9,14 @@ from   torch.autograd import Variable
 from   torch.utils.data import Dataset, DataLoader
 import matplotlib.pyplot as plt
 
-EPOCH = 1
-BATCH_SIZE = 20
+EPOCH = 30
+BATCH_SIZE = 200
 LR   = 0.01
-N    = 16
+N    = 20
 zero = torch.zeros(BATCH_SIZE,N);
 one  = torch.ones(BATCH_SIZE,N);
-train_data_path = r'dataset/traindata500.txt'
-test_data_path = r'dataset/testdata500.txt'
+train_data_path = r'dataset/traindata1000.txt'
+test_data_path = r'dataset/testdata1000.txt'
 
 class ECDataset(Dataset):
     data: Tensor
@@ -100,7 +100,7 @@ if __name__ == '__main__':
     loss_count = []
     acc_count = []
 
-    for epoch in range(3):
+    for epoch in range(EPOCH):
         for i, (x, y) in enumerate(train_loader):
             out = model(x)
 
