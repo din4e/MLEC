@@ -14,8 +14,8 @@ LR = 0.01
 N = 16
 zero = torch.zeros(BATCH_SIZE, N)
 one = torch.ones(BATCH_SIZE, N)
-train_data_path = r'dataset/traindata500x.txt'
-test_data_path = r'dataset/testdata500x.txt'
+train_data_path = r'dataset/traindata500.txt'
+test_data_path = r'dataset/testdata500.txt'
 
 class ECDataset(Dataset):
     data: Tensor
@@ -68,15 +68,15 @@ class EC:
         return
 
 if __name__ == '__main__':
-    a = np.array([[1, 2, 3], [2, 3, 4], [2, 1, 3]])
-    b, _ = np.linalg.eig(a)
-    b = max(b)
-    print(b)
+    # a = np.array([[1, 2, 3], [2, 3, 4], [2, 1, 3]])
+    # b, _ = np.linalg.eig(a)
+    # b = max(b)
+    # print(b)
 
-    print("数组的维度数目", a.shape)
-    exit()
+    # print("数组的维度数目", a.shape)
+    # exit()
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu") # if gpu is to be used
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu") # if gpu is to be used
     model = CNN().double()     # !!!
     loss_func = nn.MSELoss()
     opt = optim.Adam(model.parameters(), lr=LR)
