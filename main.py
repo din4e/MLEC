@@ -15,20 +15,35 @@ LR = 0.01  # 学习率
 N = 16  # 节点数目
 zero = torch.zeros(BATCH_SIZE, N)
 one = torch.ones(BATCH_SIZE, N)
-train_data_path = r'dataset/traindata500x.txt'
-test_data_path = r'dataset/testdata500x.txt'
+train_data_path = r'dataset/traindata500.txt'
+test_data_path = r'dataset/testdata500.txt'
 
+
+def getLambda(a = [[]], x = []) -> float:
+    _a = copy.deepcopy(a)
+    n = len(a)
+    if n != 0:
+        if len(x)!=0:
+            for i in range(n):
+                if x[i] == 1:
+                    for j in range(n):
+                        _a[i][j] = _a[j][i] = 0
+        b, _ = np.linalg.eig(_a)
+        Lambda = max(b)
+    else:
+        return 0.0
+    return Lambda
 
 class Graph:
-    def __init__(self, n, a=[]):
+    def __init__(self, n, a=[[]]):
         self.N = n
         self.a = copy.deepcopy(a)
         self.vertices = []
-        for i in range(N):
+        for i in range(n):
             self.vertices.append([]);
         self.edges = []
         self.getVerticeAndEdge(a)
-        self.Lambda = 0
+        self.Lambda = getLambda(a)
 
     def size(self) -> int:
         return self.N
@@ -60,56 +75,88 @@ class Graph:
 
 
 class Strategy:
-    def __init__(self, x = [], Lambda = 0):
+    def __init__(self, index = 0,x = [], Lambda = 0.0):
         self.NEtype = ['NotNE', 'NE', 'MinNE', 'MaxNE']
-        self.NEindex = 0
+        self.NEindex = index
+        x = np.array(x)
         self.N = x.shape[0]
-        self.X = []
-        self.X.append(x)
+        self.X = []  # np.empty(shape=[0, self.N])
+        self.X.append(x)  # 枚举算法可能有多个策略
         self.Cost = 0
         for i in x:
-            if i==1:
+            if i == 1:
                 self.Cost = self.Cost + 1
-        self.Lambda = Lambda
+        self.Lambda = []
+        self.Lambda.append(Lambda)  # 枚举算法可能有多个策略 对应多个lambda值
 
     def print(self):
-        print("Type:%s Lambda:%d Cost:%d" % (self.NEtype[self.NEindex], self.Lambda, self.Cost))
+        print("Type:%s Cost:%d" % (self.NEtype[self.NEindex], self.Cost))
         for i, x in enumerate(self.X):
-            print("Strategy %d: Secured " % (i+1), end='')
+            print("Strategy %d (Lambda %f): Secured " % (i+1, self.Lambda[i]), end='')
             for j, _x in enumerate(x):
                 if _x == 1:
                     print(j, end=' ')
                 else:
-                    _
-                    # print(j, end=' ')
+                    _ # print(j, end=' ')
             print()
 
 class EC:
     # a:numpy
-    def __init__(self, a):
-        self.N = a.shape[0]
-        self.G = Graph(self.N, a)
+    def __init__(self, a, T:float):
+        self.N = a.shape[0]  # tensor -> list
+        self.G = copy.deepcopy(Graph(self.N, a))
         self.a = copy.deepcopy(self.G.a)
-        self.Lambda = 0
-        self.T = 0
+        self.Lambda = 0.0
+        self.T = T
 
-    def getLambda(self) -> float:
+    def getLambda(self, a = [], x = []) -> float:
+        # print(self.G.a)
+        if len(a) == 0:
+            self.a = copy.deepcopy(self.G.a)
+        if len(x) != 0:
+            for i in range(len(x)):
+                if x[i] == 1:
+                    # print(i)
+                    for j in range(self.N):
+                        self.a[i][j] = self.a[j][i] = 0
         b, _ = np.linalg.eig(self.a)
         self.Lambda = max(b)
         return self.Lambda
 
     def isNE(self, x) -> bool:
-
         return
 
-    def iteriveSecure(self, pi: list, rho: list) -> list:
-
-        return x
+    def iterativesecure(self, pi, rho=[]):
+        x = [0 for _ in range(self.N)]
+        # Lambda = self.getLambda([],x)
+        # print(Lambda)
+        if len(pi) != self.N:
+            return [], -1.0
+        if len(rho) == 0:
+            rho = list(reversed(pi))
+        for p in pi:
+            x[p] = 1  # noerror print(p,x)
+            if self.getLambda([], x) < self.T:
+                break  # print(x, self.getLambda([], x),self.T,'/')
+        for r in rho:
+            if x[r] == 1:
+                x[r] = 0
+                x[r] = 1 if self.getLambda([], x) >= self.T else 0 # print(x, self.getLambda([], x), self.T)
+        # print(x)
+        return x, self.getLambda([], x)
 
     def HDG(self):
+        l = []
+        for i,v in enumerate(self.G.vertices):
+            l.append([i,len(v)])
+        l.sort(key = lambda x:x[1], reverse = True )
+        pi = [x[0] for x in l]
+        rho = list(reversed(pi))
+        x, Lambda = self.iterativesecure(pi, rho)
+        return Strategy(2, x, Lambda)
+
+    def LDG(self):
         return
-
-
 
 
 class ECDataset(Dataset):
@@ -157,23 +204,47 @@ if __name__ == '__main__':
     # b = max(b)
     # print(b)
 
-    # opt = optim.SGD(model.parameters(), lr=LR, momentum=0.9)
-    # opt = torch.optim.Adam(model.parameters(), lr=LR, betas=(0.9, 0.99))
     train_data = ECDataset(train_data_path, True)
 
-    a, _ = train_data[0]
+    for i in range(len(train_data)):
+        a, y = train_data[i]
+        # a, _ =   # 根据traindata/testdata获取邻接矩阵
+        G = Graph(N, a)  # 根据邻接矩阵a 获得图的点边信息
+        ec = EC(a, G.Lambda * 0.5)  # 根据邻接矩阵a 获得图的点边信息 以及ECGame相关的参数
+        s = ec.HDG()  # Strategy([1, 0, 0, 1, 1])
+        # y=int(y)
+        y = y.int().numpy()
+        cnt_y = 0
+        for i in y:
+            if i == 1:
+                cnt_y = cnt_y + 1
+        cnt_hdg = 0
+        for i in s.X[0]:
+            if i == 1:
+                cnt_hdg = cnt_hdg + 1
+        # print("1: ", y, cnt_y)
+        # print("2: ", s.X[0], cnt_hdg) # , end=' ')
+        print(cnt_y-cnt_hdg)
+        # s.print()
+
+
     # a = a.numpy()
     # b = copy.deepcopy(a)
     # print(a is b)
-    # x = np.array([1,2,3])
+    # x = np.array([[], [], [11]])
+    # b = [ [1,1], [1,1]]
+    # x = [1,1,1,1, 1,1,1,1, 0,0,0,0, 1,1,1,1]
+    # print(getLambda(a, x)) # print(any(x))
+
     # print(x.shape[0])
     # print("数组的维度数目", a.shape[0])
     # print(a)
-    G = Graph(N, a)
-    ec = EC(a)
-    ec.HDG()
-    s = Strategy(np.array([1, 0, 0, 1, 1]))
-    s.print()
+    a, _ = train_data[0]
+    # G = Graph(N, a)  #  根据邻接矩阵a 获得图的点边信息
+    # # print(G.Lambda)
+    # ec = EC(a, G.Lambda*0.5)  #  根据邻接矩阵a 获得图的点边信息 以及ECGame相关的参数
+    # s = ec.HDG()  # Strategy([1, 0, 0, 1, 1])
+    # s.print()
     exit()
 
     test_data = ECDataset(test_data_path, False)
@@ -187,6 +258,9 @@ if __name__ == '__main__':
     model = CNN().double()  # 把数据都转成double 否则跑不起来
     loss_func = nn.MSELoss()  # 损失函数用的 平方差公式
     opt = optim.Adam(model.parameters(), lr=LR)
+
+    # opt = optim.SGD(model.parameters(), lr=LR, momentum=0.9)
+    # opt = torch.optim.Adam(model.parameters(), lr=LR, betas=(0.9, 0.99))
 
     for epoch in range(EPOCH):
         for i, (x, y) in enumerate(train_loader):
