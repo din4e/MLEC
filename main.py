@@ -12,11 +12,11 @@ import matplotlib.pyplot as plt
 EPOCH = 50
 BATCH_SIZE = 100
 LR = 0.01  # 学习率
-N = 16  # 节点数目
+N = 20  # 节点数目
 zero = torch.zeros(BATCH_SIZE, N)
 one = torch.ones(BATCH_SIZE, N)
-train_data_path = r'dataset/traindata500.txt'
-test_data_path = r'dataset/testdata500.txt'
+train_data_path = r'dataset/traindata1000.txt'
+test_data_path = r'dataset/testdata1000.txt'
 
 
 def getLambda(a = [[]], x = []) -> float:
@@ -51,7 +51,7 @@ class Graph:
     def getVerticeAndEdge(self, a):
         for i in range(self.N-1):
             for j in range(i+1, self.N):
-                if a[i][j] == 1:
+                if a[i][j] == 1 or a[i][j]==1.0:
                     self.vertices[i].append(j)
                     self.vertices[j].append(i)
                     self.edges.append([i,j])
@@ -59,7 +59,7 @@ class Graph:
     def printV(self):
         print("Vertices:")
         for i in range(self.N):
-            print("Node", i, end='')
+            print("Node", i, end=':')
             for v in self.vertices[i]:
                 print(v, end=' ')
             print()
@@ -129,20 +129,21 @@ class EC:
     def iterativesecure(self, pi, rho=[]):
         x = [0 for _ in range(self.N)]
         # Lambda = self.getLambda([],x)
-        # print(Lambda)
+        # self.G.printV() # print(Lambda)
         if len(pi) != self.N:
             return [], -1.0
         if len(rho) == 0:
             rho = list(reversed(pi))
         for p in pi:
-            x[p] = 1  # noerror print(p,x)
+            x[p] = 1  # print(p) # noerror print(p,x)
             if self.getLambda([], x) < self.T:
                 break  # print(x, self.getLambda([], x),self.T,'/')
         for r in rho:
             if x[r] == 1:
+                # print(r)
                 x[r] = 0
                 x[r] = 1 if self.getLambda([], x) >= self.T else 0 # print(x, self.getLambda([], x), self.T)
-        # print(x)
+        # print(type(x))
         return x, self.getLambda([], x)
 
     def HDG(self):
@@ -176,11 +177,30 @@ class ECDataset(Dataset):
         self.data = self.data.view(-1, N, N)
         self.label = torch.from_numpy(_label).double()
 
+        # self.hdg = []
+        # for data in self.data:
+        #     a = data.numpy()
+        #     G = Graph(N, a)
+        #     ec = EC(a, G.Lambda * 0.5)  # 根据邻接矩阵a 获得图的点边信息 以及ECGame相关的参数
+        #     s = ec.HDG()  # Strategy([1, 0, 0, 1, 1])
+        #     self.hdg.append(s.X)
+
+
     def __getitem__(self, index):
         return self.data[index], self.label[index]
 
     def __len__(self):
         return self.data.size(0)
+
+def getHDG(x):
+    hdglist = []
+    for data in x:
+        a = data.numpy()
+        G = Graph(N, a)
+        ec = EC(a, G.Lambda * 0.5)  # 根据邻接矩阵a 获得图的点边信息 以及ECGame相关的参数
+        s = ec.HDG()  # Strategy([1, 0, 0, 1, 1])
+        hdglist.append(s.X)
+    return np.array(hdglist).reshape(BATCH_SIZE, N)
 
 
 class CNN(nn.Module):
@@ -191,11 +211,30 @@ class CNN(nn.Module):
         self.line1 = nn.Linear((N - 2) * (N - 2), N)
 
     def forward(self, xb):
+        x = copy.deepcopy(xb)
         xb = xb.view(-1, 1, N, N)
         xb = F.relu(self.conv1(xb))
         xb = F.relu(self.conv2(xb))
+        # xb = torch.tanh(self.line1(xb.view(xb.size(0), -1)))
         xb = self.line1(xb.view(xb.size(0), -1))
-        return xb
+        xb_is = []
+        for j, a in enumerate(x):
+            l = []
+            for k, v in enumerate(xb[j]):
+                l.append([k, v])
+            l.sort(key=lambda v: v[1], reverse=True)
+            pi = [v[0] for v in l]
+            rho = list(reversed(pi))
+            G = Graph(N, a.numpy())  # 根据邻接矩阵a 获得图的点边信息
+            ec = EC(a, G.Lambda * 0.5)  # 根据邻接矩阵a 获得图的点边信息 以及ECGame相关的参数
+            xx, Lambda = ec.iterativesecure(pi, rho)  # Strategy([1, 0, 0, 1, 1])
+            xb_is.append(xx)
+        # print(xb_is[0], type(xb_is))
+        # print(xb[0], type(xb))
+        xb_is = torch.Tensor(xb_is)
+        xb_is = Variable(xb_is.double(), requires_grad=True)
+        # print(xb_is[0])
+        return xb_is
 
 
 if __name__ == '__main__':
@@ -206,27 +245,28 @@ if __name__ == '__main__':
 
     train_data = ECDataset(train_data_path, True)
 
-    for i in range(len(train_data)):
-        a, y = train_data[i]
-        # a, _ =   # 根据traindata/testdata获取邻接矩阵
-        G = Graph(N, a)  # 根据邻接矩阵a 获得图的点边信息
-        ec = EC(a, G.Lambda * 0.5)  # 根据邻接矩阵a 获得图的点边信息 以及ECGame相关的参数
-        s = ec.HDG()  # Strategy([1, 0, 0, 1, 1])
-        # y=int(y)
-        y = y.int().numpy()
-        cnt_y = 0
-        for i in y:
-            if i == 1:
-                cnt_y = cnt_y + 1
-        cnt_hdg = 0
-        for i in s.X[0]:
-            if i == 1:
-                cnt_hdg = cnt_hdg + 1
-        # print("1: ", y, cnt_y)
-        # print("2: ", s.X[0], cnt_hdg) # , end=' ')
-        print(cnt_y-cnt_hdg)
-        # s.print()
-
+    # for i in range(len(train_data)):
+    #     a, y = train_data[i]
+    #     # a, _ =   # 根据traindata/testdata获取邻接矩阵
+    #     G = Graph(N, a)  # 根据邻接矩阵a 获得图的点边信息
+    #     ec = EC(a, G.Lambda * 0.5)  # 根据邻接矩阵a 获得图的点边信息 以及ECGame相关的参数
+    #     s = ec.HDG()  # Strategy([1, 0, 0, 1, 1])
+    #     # y=int(y)
+    #     y = y.int().numpy()
+    #     cnt_y = 0
+    #     for j in y:
+    #         if j == 1:
+    #             cnt_y = cnt_y + 1
+    #     cnt_hdg = 0
+    #     for j in s.X[0]:
+    #         if j == 1:
+    #             cnt_hdg = cnt_hdg + 1
+    #     # print("1: ", y, cnt_y)
+    #     # print("2: ", s.X[0], cnt_hdg) # , end=' ')
+    #     print(i)
+    #     if cnt_hdg-cnt_y>=2:
+    #         print(y,s.X[0])
+    #     # s.print()
 
     # a = a.numpy()
     # b = copy.deepcopy(a)
@@ -239,13 +279,13 @@ if __name__ == '__main__':
     # print(x.shape[0])
     # print("数组的维度数目", a.shape[0])
     # print(a)
-    a, _ = train_data[0]
+    # a, _ = train_data[0]
     # G = Graph(N, a)  #  根据邻接矩阵a 获得图的点边信息
     # # print(G.Lambda)
     # ec = EC(a, G.Lambda*0.5)  #  根据邻接矩阵a 获得图的点边信息 以及ECGame相关的参数
     # s = ec.HDG()  # Strategy([1, 0, 0, 1, 1])
     # s.print()
-    exit()
+    # exit()
 
     test_data = ECDataset(test_data_path, False)
     train_loader = DataLoader(dataset=train_data, batch_size=BATCH_SIZE, shuffle=True)
@@ -258,13 +298,32 @@ if __name__ == '__main__':
     model = CNN().double()  # 把数据都转成double 否则跑不起来
     loss_func = nn.MSELoss()  # 损失函数用的 平方差公式
     opt = optim.Adam(model.parameters(), lr=LR)
-
     # opt = optim.SGD(model.parameters(), lr=LR, momentum=0.9)
     # opt = torch.optim.Adam(model.parameters(), lr=LR, betas=(0.9, 0.99))
 
     for epoch in range(EPOCH):
         for i, (x, y) in enumerate(train_loader):
+            # print(type(x), type(y))
+            # print(y, getHDG(x))
             out = model(x)
+            # hdglist = getHDG(x) # print(hdglist)
+            # out_np = out.detach().numpy()
+            # out_is=[]
+            # # print(type(out))
+            # for j, a in enumerate(x):
+            #     l = []
+            #     for k, v in enumerate(out_np[j]):
+            #         l.append([k, v])
+            #     # print(l)
+            #     l.sort(key=lambda v: v[1], reverse=True)
+            #     pi = [v[0] for v in l]
+            #     rho = list(reversed(pi))
+            #     G = Graph(N, a)  # 根据邻接矩阵a 获得图的点边信息
+            #     ec = EC(a, G.Lambda * 0.5)  # 根据邻接矩阵a 获得图的点边信息 以及ECGame相关的参数
+            #     xx, Lambda = ec.iterativesecure(pi, rho)  # Strategy([1, 0, 0, 1, 1])
+            #     out_is.append(xx)
+            # out_is = torch.from_numpy(np.array(out_is).reshape(BATCH_SIZE,N)).double
+
             loss = loss_func(out, y)  # 使用优化器优化损失
             opt.zero_grad()  # 清空上一步残余更新参数值
             loss.backward()  # 误差反向传播，计算参数更新值
@@ -277,9 +336,21 @@ if __name__ == '__main__':
                 # test_x = Variable(a)
                 # test_y = Variable(b)
                 _y = model(test_x)
-                _y = torch.where(_y > 0.5, one, zero)
-                accuracy = _y.numpy() == test_y.numpy()
-                acc.append(accuracy.mean())
+                hdglist = getHDG(test_x)
+                for j in range(len(_y)):
+                    cnt_y = 0
+                    cnt_hdg = 0
+                    for k in _y[j]:
+                        if k==1.0:
+                            cnt_y = cnt_y + 1
+                    for k in hdglist[j]:
+                        if k==1.0:
+                            cnt_hdg = cnt_hdg + 1
+                    print(cnt_y, cnt_hdg)
+                # _y = torch.where(_y > 0.5, one, zero)
+                # cnt_y =
+                # accuracy = _y.numpy() == test_y.numpy()
+                # acc.append(accuracy.mean())
             # print(acc)
             acc = np.array(acc)
             acc_count.append(acc.mean())
@@ -289,5 +360,5 @@ if __name__ == '__main__':
     plt.plot(loss_count, label='Loss')
     plt.plot(acc_count, label='Acc')
     plt.legend()
-    plt.savefig("loss500.png")
+    plt.savefig("loss1000.png")
     plt.show()
