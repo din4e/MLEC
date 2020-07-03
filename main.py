@@ -10,13 +10,13 @@ from torch.utils.data import Dataset, DataLoader
 import matplotlib.pyplot as plt
 
 EPOCH = 50
-BATCH_SIZE = 100
+BATCH_SIZE = 500
 LR = 0.01  # 学习率
 N = 20  # 节点数目
 zero = torch.zeros(BATCH_SIZE, N)
 one = torch.ones(BATCH_SIZE, N)
-train_data_path = r'dataset/traindata1000.txt'
-test_data_path = r'dataset/testdata1000.txt'
+train_data_path = r'dataset/traindata10000.txt'
+test_data_path = r'dataset/testdata10000.txt'
 
 
 def getLambda(a = [[]], x = []) -> float:
@@ -123,8 +123,16 @@ class EC:
         self.Lambda = max(b)
         return self.Lambda
 
-    def isNE(self, x) -> bool:
-        return
+    def isNE(self, X) -> bool:
+        if self.getLambda([],X)>self.T:
+            return False
+        for i,x in enumerate(X):
+            if x==1 or x==1.0:
+                X[i]=0
+                if self.getLambda([],X)<self.T:
+                    return False
+                X[i]=1
+        return True
 
     def iterativesecure(self, pi, rho=[]):
         x = [0 for _ in range(self.N)]
@@ -154,6 +162,8 @@ class EC:
         pi = [x[0] for x in l]
         rho = list(reversed(pi))
         x, Lambda = self.iterativesecure(pi, rho)
+        if not self.isNE(x):
+            print("ERROR")
         return Strategy(2, x, Lambda)
 
     def LDG(self):
@@ -228,6 +238,8 @@ class CNN(nn.Module):
             G = Graph(N, a.numpy())  # 根据邻接矩阵a 获得图的点边信息
             ec = EC(a, G.Lambda * 0.5)  # 根据邻接矩阵a 获得图的点边信息 以及ECGame相关的参数
             xx, Lambda = ec.iterativesecure(pi, rho)  # Strategy([1, 0, 0, 1, 1])
+            if not ec.isNE(xx):
+                print("ERROR")
             xb_is.append(xx)
         # print(xb_is[0], type(xb_is))
         # print(xb[0], type(xb))
