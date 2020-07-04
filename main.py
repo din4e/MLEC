@@ -345,14 +345,27 @@ if __name__ == '__main__':
             print('{}:\t'.format(i), loss.item())  # torch.save(model, r'')
             acc = []
             for test_x, test_y in test_loader:
-                # test_x = Variable(a)
-                # test_y = Variable(b)
+                # test_x = Variable(a) # test_y = Variable(b)
                 _y = model(test_x)
+                _y_is = []
+                for j, a in enumerate(test_x):
+                    l = []
+                    for k, v in enumerate(_y[j]):
+                        l.append([k, v])
+                    l.sort(key=lambda v: v[1], reverse=True)
+                    pi = [v[0] for v in l]
+                    rho = list(reversed(pi))
+                    G = Graph(N, a.numpy())  # 根据邻接矩阵a 获得图的点边信息
+                    ec = EC(a, G.Lambda * 0.5)  # 根据邻接矩阵a 获得图的点边信息 以及ECGame相关的参数
+                    xx, Lambda = ec.iterativesecure(pi, rho)  # Strategy([1, 0, 0, 1, 1])
+                    _y_is.append(xx)
+                _y_is = torch.Tensor(_y_is)
+                _y_is = Variable(_y_is.double(), requires_grad=True)
                 hdglist = getHDG(test_x)
                 for j in range(len(_y)):
                     cnt_y = 0
                     cnt_hdg = 0
-                    for k in _y[j]:
+                    for k in _y_is[j]:
                         if k==1.0:
                             cnt_y = cnt_y + 1
                     for k in hdglist[j]:
@@ -364,9 +377,10 @@ if __name__ == '__main__':
                 # accuracy = _y.numpy() == test_y.numpy()
                 # acc.append(accuracy.mean())
             # print(acc)
-            acc = np.array(acc)
-            acc_count.append(acc.mean())
-            print('accuracy:\t', acc.mean())
+            # acc = np.array(acc)
+            # acc_count.append(acc.mean())
+            # print('accuracy:\t', acc.mean())
+            print(i)
 
     plt.figure('Result')
     plt.plot(loss_count, label='Loss')
