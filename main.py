@@ -9,8 +9,8 @@ from torch.autograd import Variable
 from torch.utils.data import Dataset, DataLoader
 import matplotlib.pyplot as plt
 
-EPOCH = 50
-BATCH_SIZE = 500
+EPOCH = 40
+BATCH_SIZE = 200
 LR = 0.01  # 学习率
 N = 20  # 节点数目
 zero = torch.zeros(BATCH_SIZE, N)
@@ -25,7 +25,7 @@ def getLambda(a = [[]], x = []) -> float:
     if n != 0:
         if len(x)!=0:
             for i in range(n):
-                if x[i] == 1:
+                if x[i] == 1 or x[i] == 1.0:
                     for j in range(n):
                         _a[i][j] = _a[j][i] = 0
         b, _ = np.linalg.eig(_a)
@@ -84,7 +84,7 @@ class Strategy:
         self.X.append(x)  # 枚举算法可能有多个策略
         self.Cost = 0
         for i in x:
-            if i == 1:
+            if i == 1 or i == 1.0:
                 self.Cost = self.Cost + 1
         self.Lambda = []
         self.Lambda.append(Lambda)  # 枚举算法可能有多个策略 对应多个lambda值
@@ -94,7 +94,7 @@ class Strategy:
         for i, x in enumerate(self.X):
             print("Strategy %d (Lambda %f): Secured " % (i+1, self.Lambda[i]), end='')
             for j, _x in enumerate(x):
-                if _x == 1:
+                if _x == 1 or _x == 1.0:
                     print(j, end=' ')
                 else:
                     _ # print(j, end=' ')
@@ -115,8 +115,7 @@ class EC:
             self.a = copy.deepcopy(self.G.a)
         if len(x) != 0:
             for i in range(len(x)):
-                if x[i] == 1:
-                    # print(i)
+                if x[i] == 1 or x[i] == 1.0:
                     for j in range(self.N):
                         self.a[i][j] = self.a[j][i] = 0
         b, _ = np.linalg.eig(self.a)
@@ -127,11 +126,11 @@ class EC:
         if self.getLambda([],X)>self.T:
             return False
         for i,x in enumerate(X):
-            if x==1 or x==1.0:
-                X[i]=0
-                if self.getLambda([],X)<self.T:
+            if x == 1 or x == 1.0:
+                X[i] = 0
+                if self.getLambda([],X) < self.T:
                     return False
-                X[i]=1
+                X[i] = 1
         return True
 
     def iterativesecure(self, pi, rho=[]):
@@ -147,7 +146,7 @@ class EC:
             if self.getLambda([], x) < self.T:
                 break  # print(x, self.getLambda([], x),self.T,'/')
         for r in rho:
-            if x[r] == 1:
+            if x[r] == 1 or x[r] == 1.0:
                 # print(r)
                 x[r] = 0
                 x[r] = 1 if self.getLambda([], x) >= self.T else 0 # print(x, self.getLambda([], x), self.T)
@@ -156,9 +155,9 @@ class EC:
 
     def HDG(self):
         l = []
-        for i,v in enumerate(self.G.vertices):
-            l.append([i,len(v)])
-        l.sort(key = lambda x:x[1], reverse = True )
+        for i, v in enumerate(self.G.vertices):
+            l.append([i, len(v)])
+        l.sort(key = lambda x : x[1], reverse = True )
         pi = [x[0] for x in l]
         rho = list(reversed(pi))
         x, Lambda = self.iterativesecure(pi, rho)
@@ -174,7 +173,7 @@ class ECDataset(Dataset):
     data: Tensor
     label: Tensor
 
-    def __init__(self, txt_path, is_traindata=True, transform=None, target_transform=None):
+    def __init__(self, txt_path, is_traindata = True, transform = None, target_transform = None):
         self.is_traindata = is_traindata
         self.transform = transform
         self.target_transform = target_transform
@@ -216,9 +215,19 @@ def getHDG(x):
 class CNN(nn.Module):
     def __init__(self):
         super().__init__()
-        self.conv1 = nn.Conv2d(1, 1, kernel_size=2, stride=1, padding=0)  # 10*10->9*9
-        self.conv2 = nn.Conv2d(1, 1, kernel_size=2, stride=1, padding=0)  # 9*9 -> 8*8
+
+        self.conv1 = nn.Conv2d(1, 1, kernel_size=2, stride=1, padding=0)  # N*N->(N-1)*(N-1)
+        self.conv2 = nn.Conv2d(1, 1, kernel_size=2, stride=1, padding=0)  # (N-1)*(N-1)->(N-2)*(N-2)
+        # self.conv2 = nn.Conv2d(1, 1, kernel_size=2, stride=1, padding=0)
         self.line1 = nn.Linear((N - 2) * (N - 2), N)
+
+        # self.conv1 = nn.Conv2d(1, 1, kernel_size=3, stride=1, padding=0)  # N*N->(N-2)*(N-2)
+        # self.conv2 = nn.Conv2d(1, 1, kernel_size=3, stride=1, padding=0)  # (N-2)*(N-2) -> (N-4)*(N-4)
+        # self.line1 = nn.Linear((N - 4) * (N - 4), N)
+
+        # self.conv1 = nn.Conv2d(1, 1, kernel_size=5, stride=1, padding=0)  # N*N->(N-4)*(N-4)
+        # self.conv2 = nn.Conv2d(1, 1, kernel_size=5, stride=1, padding=0)  # (N-4)*(N-4)-> (N-8)*(N-8)
+        # self.line1 = nn.Linear((N - 8) * (N - 8), N)
 
     def forward(self, xb):
         x = copy.deepcopy(xb)
@@ -227,29 +236,30 @@ class CNN(nn.Module):
         xb = F.relu(self.conv2(xb))
         # xb = torch.tanh(self.line1(xb.view(xb.size(0), -1)))
         xb = self.line1(xb.view(xb.size(0), -1))
-        xb_is = []
-        for j, a in enumerate(x):
-            l = []
-            for k, v in enumerate(xb[j]):
-                l.append([k, v])
-            l.sort(key=lambda v: v[1], reverse=True)
-            pi = [v[0] for v in l]
-            rho = list(reversed(pi))
-            G = Graph(N, a.numpy())  # 根据邻接矩阵a 获得图的点边信息
-            ec = EC(a, G.Lambda * 0.5)  # 根据邻接矩阵a 获得图的点边信息 以及ECGame相关的参数
-            xx, Lambda = ec.iterativesecure(pi, rho)  # Strategy([1, 0, 0, 1, 1])
-            if not ec.isNE(xx):
-                print("ERROR")
-            xb_is.append(xx)
-        # print(xb_is[0], type(xb_is))
-        # print(xb[0], type(xb))
-        xb_is = torch.Tensor(xb_is)
-        xb_is = Variable(xb_is.double(), requires_grad=True)
-        # print(xb_is[0])
-        return xb_is
+        return xb
+        # xb_is = []
+        # for j, a in enumerate(x):
+        #     l = []
+        #     for k, v in enumerate(xb[j]):
+        #         l.append([k, v])
+        #     l.sort(key=lambda v: v[1], reverse=False)
+        #     pi = [v[0] for v in l]
+        #     rho = list(reversed(pi))
+        #     G = Graph(N, a.numpy())  # 根据邻接矩阵a 获得图的点边信息
+        #     ec = EC(a, G.Lambda * 0.5)  # 根据邻接矩阵a 获得图的点边信息 以及ECGame相关的参数
+        #     xx, Lambda = ec.iterativesecure(pi, rho)  # Strategy([1, 0, 0, 1, 1])
+        #     if not ec.isNE(xx):
+        #         print("ERROR")
+        #     xb_is.append(xx)
+        # # print(xb_is[0], type(xb_is))
+        # # print(xb[0], type(xb))
+        # xb_is = torch.Tensor(xb_is)
+        # xb_is = Variable(xb_is.double(), requires_grad=True)
+        # return xb_is
 
 
 if __name__ == '__main__':
+    # getLambda
     # a = np.array([[1, 2, 3], [2, 3, 4], [2, 1, 3]])
     # b, _ = np.linalg.eig(a)
     # b = max(b)
@@ -300,11 +310,12 @@ if __name__ == '__main__':
     # exit()
 
     test_data = ECDataset(test_data_path, False)
-    train_loader = DataLoader(dataset=train_data, batch_size=BATCH_SIZE, shuffle=True)
-    test_loader = DataLoader(dataset=test_data, batch_size=BATCH_SIZE, shuffle=True)
+    train_loader = DataLoader(dataset=train_data, batch_size=BATCH_SIZE, shuffle=False)
+    test_loader = DataLoader(dataset=test_data, batch_size=BATCH_SIZE, shuffle=False)
 
     loss_count = []
     acc_count = []
+    gap_count = []
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # if gpu is to be used
     model = CNN().double()  # 把数据都转成double 否则跑不起来
@@ -343,10 +354,10 @@ if __name__ == '__main__':
 
             loss_count.append(loss)
             print('{}:\t'.format(i), loss.item())  # torch.save(model, r'')
-            acc = []
+
+            gap = 0.0 # acc = []
             for test_x, test_y in test_loader:
-                # test_x = Variable(a) # test_y = Variable(b)
-                _y = model(test_x)
+                _y = model(test_x) # test_x = Variable(a) # test_y = Variable(b)
                 _y_is = []
                 for j, a in enumerate(test_x):
                     l = []
@@ -365,26 +376,30 @@ if __name__ == '__main__':
                 for j in range(len(_y)):
                     cnt_y = 0
                     cnt_hdg = 0
-                    for k in _y_is[j]:
-                        if k==1.0:
+                    for k in _y_is[j]: # for k in _y_is[j]:
+                        if k == 1 or k == 1.0:
                             cnt_y = cnt_y + 1
                     for k in hdglist[j]:
-                        if k==1.0:
+                        if k == 1 or k == 1.0:
                             cnt_hdg = cnt_hdg + 1
-                    print(cnt_y, cnt_hdg)
-                # _y = torch.where(_y > 0.5, one, zero)
-                # cnt_y =
-                # accuracy = _y.numpy() == test_y.numpy()
-                # acc.append(accuracy.mean())
+                    # print(cnt_y, cnt_hdg)
+                    gap = gap+(cnt_y-cnt_hdg)
+                    # _y = torch.where(_y > 0.5, one, zero)
+                    # accuracy = _y.numpy() == test_y.numpy()
+                    # acc.append(accuracy.mean())
+                # print(gap)
+            print("Gap", gap/len(test_data))
+            gap_count.append(gap/len(test_data))
+
             # print(acc)
             # acc = np.array(acc)
             # acc_count.append(acc.mean())
             # print('accuracy:\t', acc.mean())
-            print(i)
+            # print(i," Gap ", gap)
 
     plt.figure('Result')
     plt.plot(loss_count, label='Loss')
-    plt.plot(acc_count, label='Acc')
+    plt.plot(gap_count, label='Gap')
     plt.legend()
-    plt.savefig("loss1000.png")
+    plt.savefig("fig.png")
     plt.show()
