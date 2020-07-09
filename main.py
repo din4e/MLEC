@@ -10,7 +10,7 @@ from torch.utils.data import Dataset, DataLoader
 import matplotlib.pyplot as plt
 
 EPOCH = 40
-BATCH_SIZE = 200
+BATCH_SIZE = 100
 LR = 0.01  # 学习率
 N = 20  # 节点数目
 zero = torch.zeros(BATCH_SIZE, N)
@@ -310,8 +310,8 @@ if __name__ == '__main__':
     # exit()
 
     test_data = ECDataset(test_data_path, False)
-    train_loader = DataLoader(dataset=train_data, batch_size=BATCH_SIZE, shuffle=False)
-    test_loader = DataLoader(dataset=test_data, batch_size=BATCH_SIZE, shuffle=False)
+    train_loader = DataLoader(dataset=train_data, batch_size=BATCH_SIZE, shuffle=True)
+    test_loader = DataLoader(dataset=test_data, batch_size=BATCH_SIZE, shuffle=True)
 
     loss_count = []
     acc_count = []
@@ -325,6 +325,7 @@ if __name__ == '__main__':
     # opt = torch.optim.Adam(model.parameters(), lr=LR, betas=(0.9, 0.99))
 
     for epoch in range(EPOCH):
+        print(" Epoch ", epoch)
         for i, (x, y) in enumerate(train_loader):
             # print(type(x), type(y))
             # print(y, getHDG(x))
