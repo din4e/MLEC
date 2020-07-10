@@ -230,7 +230,7 @@ class CNN(nn.Module):
         # self.line1 = nn.Linear((N - 8) * (N - 8), N)
 
     def forward(self, xb):
-        x = copy.deepcopy(xb)
+        # x = copy.deepcopy(xb)
         xb = xb.view(-1, 1, N, N)
         xb = F.relu(self.conv1(xb))
         xb = F.relu(self.conv2(xb))
