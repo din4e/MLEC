@@ -15,8 +15,8 @@ LR = 0.01  # 学习率
 N = 20  # 节点数目
 zero = torch.zeros(BATCH_SIZE, N)
 one = torch.ones(BATCH_SIZE, N)
-train_data_path = r'dataset/traindata10000.txt'
-test_data_path = r'dataset/testdata10000.txt'
+train_data_path = r'dataset/traindata1000.txt'
+test_data_path = r'dataset/testdata1000.txt'
 
 
 def getLambda(a = [[]], x = []) -> float:
@@ -234,8 +234,9 @@ class CNN(nn.Module):
         xb = xb.view(-1, 1, N, N)
         xb = F.relu(self.conv1(xb))
         xb = F.relu(self.conv2(xb))
-        # xb = torch.tanh(self.line1(xb.view(xb.size(0), -1)))
-        xb = self.line1(xb.view(xb.size(0), -1))
+        xb = torch.tanh(self.line1(xb.view(xb.size(0), -1)))
+        # xb = self.line1(xb.view(xb.size(0), -1))
+        # print(xb)
         return xb
         # xb_is = []
         # for j, a in enumerate(x):
