@@ -9,14 +9,15 @@ from torch.autograd import Variable
 from torch.utils.data import Dataset, DataLoader
 import matplotlib.pyplot as plt
 
-EPOCH = 40
+EPOCH = 5
 BATCH_SIZE = 100
 LR = 0.01  # 学习率
 N = 20  # 节点数目
 zero = torch.zeros(BATCH_SIZE, N)
 one = torch.ones(BATCH_SIZE, N)
-train_data_path = r'dataset/traindata1000.txt'
-test_data_path = r'dataset/testdata1000.txt'
+train_data_path = r'dataset/traindata10000_20hdg.txt'
+test_data_path = r'dataset/testdata10000_20hdg.txt'
+figure_name = r'10000_20hdg.png'
 
 
 def getLambda(a = [[]], x = []) -> float:
@@ -374,7 +375,8 @@ if __name__ == '__main__':
                     _y_is.append(xx)
                 _y_is = torch.Tensor(_y_is)
                 _y_is = Variable(_y_is.double(), requires_grad=True)
-                hdglist = getHDG(test_x)
+                # hdglist = getHDG(test_x)
+                hdglist = test_y
                 for j in range(len(_y)):
                     cnt_y = 0
                     cnt_hdg = 0
@@ -403,5 +405,5 @@ if __name__ == '__main__':
     plt.plot(loss_count, label='Loss')
     plt.plot(gap_count, label='Gap')
     plt.legend()
-    plt.savefig("fig.png")
+    plt.savefig(figure_name)
     plt.show()
