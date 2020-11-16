@@ -15,3 +15,7 @@
 ![newtwork structure](docs/network_structure.png)
 
 上面的结构在训练时多了一层IS，有可能不会收敛，速度慢。
+
+## [FINDER](https://github.com/FFrankyy/FINDER)
+
+[FINDER_ND](https://github.com/FFrankyy/FINDER/tree/master/code/FINDER_ND) 无权重节点的网络分割问题（Network Dismantling ，ND）的源码
