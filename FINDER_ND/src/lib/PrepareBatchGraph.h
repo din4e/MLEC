@@ -26,20 +26,6 @@ class PrepareBatchGraph{
 public:
     PrepareBatchGraph (int aggregatorID);
     ~PrepareBatchGraph();
-    void SetupGraphInput(
-        std::vector<int> idxes,
-        std::vector< std::shared_ptr<Graph> > g_list,
-        std::vector< std::vector<int> > covered,
-        const int* actions); // 重要 但是我看不懂
-    void SetupTrain(
-        std::vector<int> idxes,
-        std::vector< std::shared_ptr<Graph> > g_list,
-        std::vector< std::vector<int> > covered,
-        const int* actions);
-    void SetupPredAll(
-        std::vector<int> idxes,
-        std::vector< std::shared_ptr<Graph> > g_list,
-        std::vector< std::vector<int> > covered);
     int GetStatusInfo(
         std::shared_ptr<Graph> g,
         int num,
@@ -48,14 +34,30 @@ public:
         int& twohop_number,
         int& threehop_number, 
         std::vector<int>& idx_map);
+    void SetupGraphInput(
+        std::vector<int> idxes,
+        std::vector<std::shared_ptr<Graph>> g_list,
+        std::vector<std::vector<int>>      covered,
+        const int* actions); // 重要 但是我看不懂
+    // SetupGraphInput() 调用 GetStatusInfo() 
+    void SetupTrain(
+        std::vector<int> idxes,
+        std::vector<std::shared_ptr<Graph>> g_list,
+        std::vector<std::vector<int>>      covered,
+        const int* actions);
+    void SetupPredAll(
+        std::vector<int> idxes,
+        std::vector< std::shared_ptr<Graph> > g_list,
+        std::vector< std::vector<int> > covered);
+    // SetupTrain()和SetupPreAll() 调用 SetupGraphInput()
     std::shared_ptr<sparseMatrix>         act_select; //
     std::shared_ptr<sparseMatrix>         rep_global; //
     std::shared_ptr<sparseMatrix>       n2nsum_param; //
     std::shared_ptr<sparseMatrix>    laplacian_param; //
     std::shared_ptr<sparseMatrix>      subgsum_param; //
-    std::vector<std::vector<int>>       idx_map_list; // ?
+    std::vector<std::vector<int>>       idx_map_list; // 是一个返回值 但不知道是什么
     std::vector<std::pair<int,int>> subgraph_id_span; //
-    std::vector<std::vector<double>>        aux_feat; // ?
+    std::vector<std::vector<double>>        aux_feat; // [gszie,(nodesize+1+1+1)]
     GraphStruct                                graph;
     std::vector<int>                   avail_act_cnt; // ?
     int                                 aggregatorID; // 图嵌入的算法 0 sum 1 mean 2 GCN
