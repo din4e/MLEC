@@ -461,10 +461,10 @@ class FINDER:
             bsize = BATCH_SIZE
             if (i + BATCH_SIZE) > n_graphs:
                 bsize = n_graphs - i
-            batch_idxes = np.zeros(bsize) # [0,0,...,0] # bsize
+            batch_idxes = np.zeros(bsize)
             for j in range(i, i + bsize):
                 batch_idxes[j - i] = j
-            batch_idxes = np.int32(batch_idxes) # 对图进行编号
+            batch_idxes = np.int32(batch_idxes)
 
             idx_map_list = self.SetupPredAll(batch_idxes, g_list, covered)
             my_dict = {}

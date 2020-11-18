@@ -28,7 +28,7 @@ public:
 	~GraphStruct();
 	void AddEdge(int idx, int x, int y);           // idx 边的编号从0开始，x头节点，y尾巴节点
 	void AddNode(int subg_id, int n_idx);          // 子图的id（用于mini-batch） n_idx 节点的id
-	void  Resize(unsigned _num_subgraph, unsigned _num_nodes = 0);
+	void Resize(unsigned _num_subgraph, unsigned _num_nodes = 0);
 	
 	LinkedTable< std::pair<int, int> > *out_edges; // 保存节点的出度点的表指针
 	LinkedTable< std::pair<int, int> > *in_edges;  // 保存节点的入度点的表指针

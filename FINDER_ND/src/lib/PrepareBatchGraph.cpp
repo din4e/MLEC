@@ -124,7 +124,7 @@ void PrepareBatchGraph::SetupGraphInput(std::vector<int>          idxes,
         aux_feat.push_back(temp_feat);
     }
 
-    graph.Resize(idxes.size(), node_cnt); // idexes是子图的数量
+    graph.Resize(idxes.size(), node_cnt);
 
     if (actions){
         act_select->rowNum=idxes.size();
@@ -204,8 +204,8 @@ std::vector<std::shared_ptr<sparseMatrix>> n2n_construct(GraphStruct* graph,int 
     //aggregatorID = 0 sum
     //aggregatorID = 1 mean
     //aggregatorID = 2 GCN
-    std::vector<std::shared_ptr<sparseMatrix>> resultList(2); // 结果是两个系列稀疏矩阵
-    // resultList.resize(2);
+    std::vector<std::shared_ptr<sparseMatrix>> resultList;
+    resultList.resize(2);
     std::shared_ptr<sparseMatrix> result =std::shared_ptr<sparseMatrix>(new sparseMatrix());
     result->rowNum = graph->num_nodes;
     result->colNum = graph->num_nodes;
