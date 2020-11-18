@@ -30,26 +30,30 @@ cdef int MAX_ITERATION = 1000000
 cdef double LEARNING_RATE = 0.0001   #dai
 cdef int MEMORY_SIZE = 500000
 cdef double Alpha = 0.0001 ## weight of reconstruction loss
+
 ########################### hyperparameters for priority(start)#########################################
+# 这部分在FINDER_ND中未使用
 cdef double epsilon = 0.0000001  # small amount to avoid zero priority
-cdef double alpha = 0.6  # [0~1] convert the importance of TD error to priority
-cdef double beta = 0.4  # importance-sampling, from initial value increasing to 1
+cdef double alpha = 0.6          # [0~1] convert the importance of TD error to priority
+cdef double beta = 0.4           # importance-sampling, from initial value increasing to 1
 cdef double beta_increment_per_sampling = 0.001
-cdef double TD_err_upper = 1.  # clipped abs error
+cdef double TD_err_upper = 1.    # clipped abs error
 ########################## hyperparameters for priority(end)#########################################
-cdef int N_STEP = 5
-cdef int NUM_MIN = 30
-cdef int NUM_MAX = 50
+
+cdef int N_STEP = 5                       # DQN的步数
+cdef int NUM_MIN = 30                     # 最小节点数
+cdef int NUM_MAX = 50                     # 最大节点数
 cdef int REG_HIDDEN = 32
-cdef int BATCH_SIZE = 64
+cdef int BATCH_SIZE = 64                  # ?每个batch的图数
 cdef double initialization_stddev = 0.01  # 权重初始化的方差
-cdef int n_valid = 200
-cdef int aux_dim = 4
-cdef int num_env = 1
+cdef int n_valid = 200                    # ?检验用的网络数
+cdef int aux_dim = 4                      # 
+cdef int num_env = 1                      # 是啥
 cdef double inf = 2147483647/2
+
 #########################  embedding method ##########################################################
 cdef int max_bp_iter = 3
-cdef int aggregatorID = 0 #0:sum; 1:mean; 2:GCN
+cdef int aggregatorID = 0      #0:sum; 1:mean; 2:GCN
 cdef int embeddingMethod = 1   #0:structure2vec; 1:graphsage
 
 
@@ -76,13 +80,13 @@ class FINDER:
         self.IsDistributionalDQN = False
         self.IsNoisyNetDQN = False
         self.Rainbow = False
-
         ############----------------------------- variants of DQN(end) ------------------- ###################################
+        
         #Simulator
-        self.ngraph_train = 0
-        self.ngraph_test = 0
-        self.env_list=[]
-        self.g_list=[]
+        self.ngraph_train = 0 # 训练集的图数
+        self.ngraph_test = 0  # 训练集的图数
+        self.env_list=[]      # 训练集的图数
+        self.g_list=[]        # 图
         self.pred=[]
         if self.IsPrioritizedSampling:
             self.nStepReplayMem = nstep_replay_mem_prioritized.py_Memory(epsilon,alpha,beta,beta_increment_per_sampling,TD_err_upper,MEMORY_SIZE)
@@ -346,7 +350,7 @@ class FINDER:
             g = nx.barabasi_albert_graph(n=cur_n, m=4)
         return g
 
-    def gen_new_graphs(self, num_min, num_max):
+    def gen_new_graphs(self, num_min, num_max): # 新创建1000个30~50个
         print('\ngenerating new training graphs...')
         sys.stdout.flush()
         self.ClearTrainGraphs()
@@ -393,7 +397,8 @@ class FINDER:
 
 
     def Run_simulator(self, int num_seq, double eps, TrainSet, int n_step):
-        cdef int num_env = len(self.env_list)
+        # eps 是 Greedy selection的系数
+        cdef int num_env = len(self.env_list) # 是网络数嘛 env是啥
         cdef int n = 0
         cdef int i
         while n < num_seq:
@@ -820,7 +825,7 @@ class FINDER:
         self.saver.restore(self.session, model_path)
         print('restore model from file successfully')
 
-    def GenNetwork(self, g):    #networkx2four
+    def GenNetwork(self, g):    #networkx2four networkx->graph
         edges = g.edges()
         if len(edges) > 0:
             a, b = zip(*edges)
@@ -829,7 +834,7 @@ class FINDER:
         else:
             A = np.array([0])
             B = np.array([0])
-        return graph.py_Graph(len(g.nodes()), len(edges), A, B)
+        return graph.py_Graph(len(g.nodes()), len(edges), A, B) 
 
 
     def argMax(self, scores):
@@ -858,7 +863,7 @@ class FINDER:
 
     def HXA(self, g, method):
         # 'HDA', 'HBA', 'HPRA', ''
-        sol = []
+        sol = [] # 保存的需要去除的点序列
         G = g.copy()
         while (nx.number_of_edges(G)>0):
             if method == 'HDA':
@@ -875,7 +880,7 @@ class FINDER:
             node = keys[maxTag]
             sol.append(int(node))
             G.remove_node(node)
-        solution = sol + list(set(g.nodes())^set(sol))
+        solution = sol + list(set(g.nodes())^set(sol)) # 在set(g.nodes)中去掉set(sol)的点
         solutions = [int(i) for i in solution]
         Robustness = self.utils.getRobustness(self.GenNetwork(g), solutions)
         return Robustness, sol

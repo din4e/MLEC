@@ -58,7 +58,7 @@ public:
     std::vector<std::vector<double>>        aux_feat; // ?
     GraphStruct                                graph;
     std::vector<int>                   avail_act_cnt; // ?
-    int                                 aggregatorID; // 图嵌入的算法
+    int                                 aggregatorID; // 图嵌入的算法 0 sum 1 mean 2 GCN
 };
 
 

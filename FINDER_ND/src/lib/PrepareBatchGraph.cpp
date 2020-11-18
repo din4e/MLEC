@@ -165,7 +165,7 @@ void PrepareBatchGraph::SetupGraphInput(std::vector<int>          idxes,
             act_select->value.push_back(1.0);
         }
         
-        for (auto p : g->edge_list){
+        for (auto &p : g->edge_list){
             if (idx_map[p.first] < 0 || idx_map[p.second] < 0)
                 continue;
             auto x = idx_map[p.first] + node_cnt, y = idx_map[p.second] + node_cnt;
