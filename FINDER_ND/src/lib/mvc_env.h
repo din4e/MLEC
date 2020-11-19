@@ -32,7 +32,7 @@ public:
     double                                CcNum;
     double                                 norm; 
     std::shared_ptr<Graph>                graph;
-    std::vector<std::vector<int>>     state_seq;
+    std::vector<std::vector<int>>     state_seq; // 每一step的 action_list
     std::vector<int>                    act_seq; 
     std::vector<int>                action_list;
 

@@ -52,10 +52,9 @@ cdef int num_env = 1                      # 环境的数量 为什么需要环�
 cdef double inf = 2147483647/2
 
 #########################  embedding method ##########################################################
-cdef int max_bp_iter = 3
+cdef int max_bp_iter = 3       # 不是说好的5层的嘛
 cdef int aggregatorID = 0      #0:sum; 1:mean; 2:GCN
 cdef int embeddingMethod = 1   #0:structure2vec; 1:graphsage
-
 
 
 class FINDER:
@@ -85,16 +84,16 @@ class FINDER:
         #Simulator
         self.ngraph_train = 0 # 训练集的图数
         self.ngraph_test = 0  # 训练集的图数
-        self.env_list=[]      # 训练集的图数
-        self.g_list=[]        # 图
-        self.pred=[]
+        self.env_list = []    # ?所有图的训练信息
+        self.g_list = []      # 所有的图
+        self.pred = []        # 所有图的预测信息  
         if self.IsPrioritizedSampling:
             self.nStepReplayMem = nstep_replay_mem_prioritized.py_Memory(epsilon,alpha,beta,beta_increment_per_sampling,TD_err_upper,MEMORY_SIZE)
         else:
             self.nStepReplayMem = nstep_replay_mem.py_NStepReplayMem(MEMORY_SIZE)
 
-        for i in range(num_env): # num_env ?所有的图的数量
-            self.env_list.append(mvc_env.py_MvcEnv(NUM_MAX))
+        for i in range(num_env): # num_env=1 ?所有的图的数量
+            self.env_list.append(mvc_env.py_MvcEnv(NUM_MAX)) # 计算betweenness用的norm
             self.g_list.append(graph.py_Graph())
 
         self.test_env = mvc_env.py_MvcEnv(NUM_MAX)
@@ -393,22 +392,21 @@ class FINDER:
         print ('Validation of HDA: %.6f'%(result_degree / n_valid))
         print ('Validation of HBA: %.6f'%(result_betweeness / n_valid))
 
-
     def Run_simulator(self, int num_seq, double eps, TrainSet, int n_step):
         # eps 是 Greedy selection的系数
-        cdef int num_env = len(self.env_list) # 是网络数嘛 env是啥
+        cdef int num_env = len(self.env_list) # 只有一个env
         cdef int n = 0
         cdef int i
         while n < num_seq:
-            for i in range(num_env):
+            for i in range(num_env): # num_env=1
                 if self.env_list[i].graph.num_nodes == 0 or self.env_list[i].isTerminal():
                     if self.env_list[i].graph.num_nodes > 0 and self.env_list[i].isTerminal():
                         n = n + 1
                         self.nStepReplayMem.Add(self.env_list[i], n_step)
                         #print ('add experience transition!')
-                    g_sample= TrainSet.Sample()
+                    g_sample= TrainSet.Sample()   
                     self.env_list[i].s0(g_sample) # 从训练集合中 随机一个图 初始化 MvcEnv 
-                    self.g_list[i] = self.env_list[i].graph
+                    self.g_list[i] = self.env_list[i].graph # 拷贝图
             if n >= num_seq:
                 break
 
@@ -424,12 +422,11 @@ class FINDER:
                     a_t = self.env_list[i].randomAction() # 返回的节点的信息
                 else:
                     a_t = self.argMax(pred[i]) # 返回每一个 env(对应一张图)中pred最高的Q值的index
-                self.env_list[i].step(a_t)
+                self.env_list[i].step(a_t) # 把对应的信息存入
                 
     #pass
     def PlayGame(self,int n_traj, double eps):
         self.Run_simulator(n_traj, eps, self.TrainSet, N_STEP)
-
 
     def SetupTrain(self, idxes, g_list, covered, actions, target):
         self.m_y = target
@@ -477,6 +474,7 @@ class FINDER:
                 result = self.session.run([self.q_on_allT], feed_dict = my_dict)
             else:
                 result = self.session.run([self.q_on_all], feed_dict = my_dict)
+
             raw_output = result[0] # session中测出来的Q值
             pos = 0
             pred = []
@@ -493,7 +491,7 @@ class FINDER:
                     cur_pred[k] = -inf
                 pred.append(cur_pred)
             assert (pos == len(raw_output))
-        return pred # 保存的是Q_pred
+        return pred # 保存的是Q_pred [batch_size,node_size]
 
     def PredictWithCurrentQNet(self,g_list,covered):
         result = self.Predict(g_list,covered,False)
@@ -507,7 +505,7 @@ class FINDER:
        self.session.run(self.UpdateTargetQNetwork)
 
     def Fit(self):
-        sample = self.nStepReplayMem.Sampling(BATCH_SIZE)
+        sample = self.nStepReplayMem.Sampling(BATCH_SIZE) # 采样 
         ness = False
         cdef int i
         for i in range(BATCH_SIZE):
@@ -602,7 +600,7 @@ class FINDER:
         self.gen_new_graphs(NUM_MIN, NUM_MAX)
 
         cdef int i, iter, idx
-        for i in range(10):
+        for i in range(10): # 10*100
             self.PlayGame(100, 1)
         self.TakeSnapShot()
         cdef double eps_start = 1.0
@@ -624,7 +622,7 @@ class FINDER:
                 self.gen_new_graphs(NUM_MIN, NUM_MAX)
             eps = eps_end + max(0., (eps_start - eps_end) * (eps_step - iter) / eps_step)
 
-            if iter % 10 == 0:
+            if iter % 10 == 0: # 每个 10 iter 做10次 Run_simulator
                 self.PlayGame(10, eps)
             if iter % 300 == 0:
                 if(iter == 0):
@@ -728,21 +726,21 @@ class FINDER:
         cdef int iter = 0
         cdef int new_action
         sum_sort_time = 0
-        while (not self.test_env.isTerminal()):
+        while (not self.test_env.isTerminal()): # 没有结束的时候
             print ('Iteration:%d'%iter)
             iter += 1
             list_pred = self.PredictWithCurrentQNet(g_list, [self.test_env.action_list])
             start_time = time.time()
-            batchSol = np.argsort(-list_pred[0])[:step]
+            batchSol = np.argsort(-list_pred[0])[:step] # 没次取前step个节点
             end_time = time.time()
             sum_sort_time += (end_time-start_time)
             for new_action in batchSol:
                 if not self.test_env.isTerminal():
-                    self.test_env.stepWithoutReward(new_action)
+                    self.test_env.stepWithoutReward(new_action) # 这个action是节点的index
                     sol.append(new_action)
                 else:
                     continue
-        return sol
+        return sol # 返回的点序列
 
 
     def EvaluateSol(self, data_test, sol_file, strategyID=0, reInsertStep=20):
@@ -786,7 +784,7 @@ class FINDER:
         while (not self.test_env.isTerminal()):
             # cost += 1
             list_pred = self.PredictWithCurrentQNet(g_list, [self.test_env.action_list])
-            new_action = self.argMax(list_pred[0])
+            new_action = self.argMax(list_pred[0]) # 返回一个节点的index
             self.test_env.stepWithoutReward(new_action)
             sol.append(new_action)
         nodes = list(range(g_list[0].num_nodes))

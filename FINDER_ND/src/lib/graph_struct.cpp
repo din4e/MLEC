@@ -43,13 +43,13 @@ void LinkedTable<T>::Resize(int new_n)
 
 template class LinkedTable<int>;
 template class LinkedTable< std::pair<int, int> >; 
-// 对<int> <std::pair<int,int>>的特化
+// 对<int> <std::pair<int,int>> 的特化
 
 GraphStruct::GraphStruct()
 {
-	out_edges = new LinkedTable< std::pair<int, int> >();
-    in_edges = new LinkedTable< std::pair<int, int> >();
-	subgraph = new LinkedTable< int >();
+	out_edges = new LinkedTable<std::pair<int, int>>();
+    in_edges  = new LinkedTable<std::pair<int, int>>();
+	subgraph  = new LinkedTable<int>();
     edge_list.clear();
 }
 

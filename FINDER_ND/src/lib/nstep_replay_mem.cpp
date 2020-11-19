@@ -9,15 +9,17 @@
 #define min(x, y) (x > y ? y : x)
 
 
- ReplaySample::ReplaySample(int batch_size){
+ReplaySample::ReplaySample(int batch_size)
+{
     g_list.resize(batch_size);
     list_st.resize(batch_size);
     list_s_primes.resize(batch_size);
     list_at.resize(batch_size);
     list_rt.resize(batch_size);
     list_term.resize(batch_size);
- }
- NStepReplayMem::NStepReplayMem(int _memory_size)
+}
+
+NStepReplayMem::NStepReplayMem(int _memory_size)
 {
     memory_size = _memory_size;
     graphs.resize(memory_size);
@@ -32,12 +34,13 @@
     distribution = new std::uniform_int_distribution<int>(0, memory_size - 1);
 }
 
-void NStepReplayMem::Add(std::shared_ptr<Graph> g, 
-                        std::vector<int> s_t,
-                        int a_t, 
-                        double r_t,
-                        std::vector<int> s_prime,
-                        bool terminal)
+void NStepReplayMem::Add(
+    std::shared_ptr<Graph> g, 
+    std::vector<int> s_t,
+    int a_t, 
+    double r_t,
+    std::vector<int> s_prime,
+    bool terminal)
 {
     graphs[current] = g;
     actions[current] = a_t;
@@ -47,7 +50,7 @@ void NStepReplayMem::Add(std::shared_ptr<Graph> g,
     terminals[current] = terminal;
 
     count = max(count, current + 1);
-    current = (current + 1) % memory_size; 
+    current = (current + 1) % memory_size;
 }
 
 void NStepReplayMem::Add(std::shared_ptr<MvcEnv> env,int n_step)
@@ -61,13 +64,11 @@ void NStepReplayMem::Add(std::shared_ptr<MvcEnv> env,int n_step)
         if (i < num_steps - 1)
             env->sum_rewards[i] = env->sum_rewards[i + 1] + env->reward_seq[i];
 
-    for (int i = 0; i < num_steps; ++i)
-    {
+    for (int i = 0; i < num_steps; ++i){
         bool term_t = false;
         double cur_r;
         std::vector<int> s_prime;
-        if (i + n_step >= num_steps)
-        {
+        if (i + n_step >= num_steps){
             cur_r = env->sum_rewards[i];
             s_prime = (env->action_list);
             term_t = true;
@@ -92,8 +93,7 @@ std::shared_ptr<ReplaySample> NStepReplayMem::Sampling(int batch_size)
     result->list_s_primes.resize(batch_size);
     result->list_term.resize(batch_size);
     auto& dist = *distribution;
-    for (int i = 0; i < batch_size; ++i)
-    {
+    for (int i = 0; i < batch_size; ++i){
         int idx = dist(generator) % count;
         result->g_list[i] = graphs[idx];
         result->list_st[i] = (states[idx]);

@@ -38,18 +38,19 @@ public:
         std::vector<int> idxes,
         std::vector<std::shared_ptr<Graph>> g_list,
         std::vector<std::vector<int>>      covered,
-        const int* actions); // 重要 但是我看不懂
-    // SetupGraphInput() 调用 GetStatusInfo() 
+        const int* actions); 
+    // 重要 但是我看不懂
+    // SetupGraphInput()->GetStatusInfo() 
     void SetupTrain(
-        std::vector<int> idxes,
-        std::vector<std::shared_ptr<Graph>> g_list,
-        std::vector<std::vector<int>>      covered,
-        const int* actions);
+        std::vector<int>                      idxes,
+        std::vector<std::shared_ptr<Graph>>  g_list,
+        std::vector<std::vector<int>>       covered,
+        const int*                          actions);
     void SetupPredAll(
-        std::vector<int> idxes,
-        std::vector< std::shared_ptr<Graph> > g_list,
-        std::vector< std::vector<int> > covered);
-    // SetupTrain()和SetupPreAll() 调用 SetupGraphInput()
+        std::vector<int>                      idxes,
+        std::vector<std::shared_ptr<Graph>>  g_list,
+        std::vector<std::vector<int>>       covered);
+    // SetupTrain/SetupPreAll()->SetupGraphInput()
     std::shared_ptr<sparseMatrix>         act_select; //
     std::shared_ptr<sparseMatrix>         rep_global; //
     std::shared_ptr<sparseMatrix>       n2nsum_param; //
@@ -62,7 +63,6 @@ public:
     std::vector<int>                   avail_act_cnt; // ?
     int                                 aggregatorID; // 图嵌入的算法 0 sum 1 mean 2 GCN
 };
-
 
 std::vector<std::shared_ptr<sparseMatrix>> n2n_construct(GraphStruct* graph,  int aggregatorID);
 std::shared_ptr<sparseMatrix>              e2n_construct(GraphStruct* graph);

@@ -10,11 +10,12 @@ class ReplaySample // 和 nstep_replay_prioritized 不能同时使用
 {
 public:
     ReplaySample(int batch_size);
-    std::vector< std::shared_ptr<Graph> > g_list;
-    std::vector< std::vector<int>> list_st, list_s_primes;
-    std::vector<int> list_at;
-    std::vector<double> list_rt;
-    std::vector<bool> list_term;
+    std::vector<std::shared_ptr<Graph>>   g_list;
+    std::vector<std::vector<int>>        list_st;
+    std::vector<std::vector<int>>  list_s_primes;
+    std::vector<int>                     list_at;
+    std::vector<double>                  list_rt;
+    std::vector<bool>                  list_term;
 };
 
 class NStepReplayMem

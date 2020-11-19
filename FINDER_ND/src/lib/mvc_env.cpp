@@ -10,7 +10,7 @@
 
 MvcEnv::MvcEnv(double _norm)
 {
-    norm = _norm;
+    norm = _norm; // 这是啥啊
     graph = nullptr;
     numCoveredEdges = 0;
     CcNum = 1.0;
@@ -85,7 +85,7 @@ void MvcEnv::stepWithoutReward(int a)
             numCoveredEdges++;
 }
 
-// random
+// random // 随机返回一个节点的index
 int MvcEnv::randomAction()
 {
     assert(graph);
