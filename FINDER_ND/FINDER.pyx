@@ -43,12 +43,12 @@ cdef double TD_err_upper = 1.    # clipped abs error
 cdef int N_STEP = 5                       # DQN的步数
 cdef int NUM_MIN = 30                     # 最小节点数
 cdef int NUM_MAX = 50                     # 最大节点数
-cdef int REG_HIDDEN = 32
+cdef int REG_HIDDEN = 32                  # ?隐藏的正则参数
 cdef int BATCH_SIZE = 64                  # ?每个batch的图数
 cdef double initialization_stddev = 0.01  # 权重初始化的方差
 cdef int n_valid = 200                    # ?检验用的网络数
 cdef int aux_dim = 4                      # 
-cdef int num_env = 1                      # 是啥
+cdef int num_env = 1                      # 环境的数量 为什么需要环境这个对象啊
 cdef double inf = 2147483647/2
 
 #########################  embedding method ##########################################################
@@ -93,7 +93,7 @@ class FINDER:
         else:
             self.nStepReplayMem = nstep_replay_mem.py_NStepReplayMem(MEMORY_SIZE)
 
-        for i in range(num_env):
+        for i in range(num_env): # num_env ?所有的图的数量
             self.env_list.append(mvc_env.py_MvcEnv(NUM_MAX))
             self.g_list.append(graph.py_Graph())
 
@@ -114,23 +114,21 @@ class FINDER:
         # [batch_size, aux_dim]
         self.aux_input = tf.placeholder(tf.float32, name="aux_input")
 
-        #[batch_size, 1]
+        # [batch_size, 1]
         if self.IsPrioritizedSampling:
             self.ISWeights = tf.placeholder(tf.float32, [BATCH_SIZE, 1], name='IS_weights')
 
-
         # init Q network
         self.loss,self.trainStep,self.q_pred, self.q_on_all,self.Q_param_list = self.BuildNet() #[loss,trainStep,q_pred, q_on_all, ...]
-        #init Target Q Network
+        # init Target Q Network
         self.lossT,self.trainStepT,self.q_predT, self.q_on_allT,self.Q_param_listT = self.BuildNet()
-        #takesnapsnot
+        # takesnapsnot # ?这个快照是干嘛的
         self.copyTargetQNetworkOperation = [a.assign(b) for a,b in zip(self.Q_param_listT,self.Q_param_list)]
-
 
         self.UpdateTargetQNetwork = tf.group(*self.copyTargetQNetworkOperation)
         # saving and loading networks
         self.saver = tf.train.Saver(max_to_keep=None)
-        #self.session = tf.InteractiveSession()
+        # self.session = tf.InteractiveSession()
         config = tf.ConfigProto(device_count={"CPU": 8},  # limit to num_cpu_core CPU usage
                                 inter_op_parallelism_threads=100,
                                 intra_op_parallelism_threads=100,
@@ -139,9 +137,10 @@ class FINDER:
         self.session = tf.Session(config = config)
 
         # self.session = tf_debug.LocalCLIDebugWrapperSession(self.session)
-        self.session.run(tf.global_variables_initializer())
+        self.session.run(tf.global_variables_initializer()) 
+        # 训练模型及保存
 
-#################################################New code for FINDER#####################################
+    #################################################New code for FINDER#####################################
     def BuildNet(self):
         # [2, embed_dim]
         w_n2l = tf.Variable(tf.truncated_normal([2, self.embedding_size], stddev=initialization_stddev), tf.float32)
@@ -193,7 +192,7 @@ class FINDER:
         # no sparse
         # [batch_size, embed_dim]
         y_input_message = tf.matmul(tf.cast(y_node_input,tf.float32), w_n2l)
-        #[batch_size, embed_dim]  # no sparse
+        # [batch_size, embed_dim]  # no sparse
         y_input_potential_layer = tf.nn.relu(y_input_message)
 
         #input_potential_layer = input_message
@@ -250,22 +249,22 @@ class FINDER:
             y_cur_message_layer = tf.nn.l2_normalize(y_cur_message_layer, axis=1)
 
         self.node_embedding = cur_message_layer
-        #[batch_size, node_cnt] * [node_cnt, embed_dim] = [batch_size, embed_dim], dense
-       # y_potential = tf.sparse_tensor_dense_matmul(tf.cast(self.subgsum_param,tf.float32), cur_message_layer)
+        # [batch_size, node_cnt] * [node_cnt, embed_dim] = [batch_size, embed_dim], dense
+        # y_potential = tf.sparse_tensor_dense_matmul(tf.cast(self.subgsum_param,tf.float32), cur_message_layer)
         y_potential = y_cur_message_layer
-        #[batch_size, node_cnt] * [node_cnt, embed_dim] = [batch_size, embed_dim]
+        # [batch_size, node_cnt] * [node_cnt, embed_dim] = [batch_size, embed_dim]
         action_embed = tf.sparse_tensor_dense_matmul(tf.cast(self.action_select, tf.float32), cur_message_layer)
 
-      #  embed_s_a = tf.concat([action_embed,y_potential],1)
+        # embed_s_a = tf.concat([action_embed,y_potential],1)
 
         # # [batch_size, embed_dim, embed_dim]
         temp = tf.matmul(tf.expand_dims(action_embed, axis=2),tf.expand_dims(y_potential, axis=1))
         # [batch_size, embed_dim]
         Shape = tf.shape(action_embed)
-       # [batch_size, embed_dim], first transform
+        # [batch_size, embed_dim], first transform
         embed_s_a = tf.reshape(tf.matmul(temp, tf.reshape(tf.tile(cross_product,[Shape[0],1]),[Shape[0],Shape[1],1])),Shape)
 
-        #[batch_size, embed_dim]
+        # [batch_size, embed_dim]
         last_output = embed_s_a
 
         if self.reg_hidden > 0:
@@ -304,9 +303,9 @@ class FINDER:
         #[node_cnt, batch_size] * [batch_size, embed_dim] = [node_cnt, embed_dim]
         rep_y = tf.sparse_tensor_dense_matmul(tf.cast(self.rep_global, tf.float32), y_potential)
 
-      #  embed_s_a_all = tf.concat([cur_message_layer,rep_y],1)
+        #  embed_s_a_all = tf.concat([cur_message_layer,rep_y],1)
 
-        # # [node_cnt, embed_dim, embed_dim]
+        # [node_cnt, embed_dim, embed_dim]
         temp1 = tf.matmul(tf.expand_dims(cur_message_layer, axis=2),tf.expand_dims(rep_y, axis=1))
         # [node_cnt embed_dim]
         Shape1 = tf.shape(cur_message_layer)
@@ -316,13 +315,13 @@ class FINDER:
         #[node_cnt, 2 * embed_dim]
         last_output = embed_s_a_all
         if self.reg_hidden > 0:
-            #[node_cnt, 2 * embed_dim] * [2 * embed_dim, reg_hidden] = [node_cnt, reg_hidden1]
+            # [node_cnt, 2 * embed_dim] * [2 * embed_dim, reg_hidden] = [node_cnt, reg_hidden1]
             hidden = tf.matmul(embed_s_a_all, h1_weight)
-            #Relu, [node_cnt, reg_hidden1]
+            # Relu, [node_cnt, reg_hidden1]
             last_output = tf.nn.relu(hidden)
-            #[node_cnt, reg_hidden1] * [reg_hidden1, reg_hidden2] = [node_cnt, reg_hidden2]
+            # [node_cnt, reg_hidden1] * [reg_hidden1, reg_hidden2] = [node_cnt, reg_hidden2]
 
-        #[node_cnt, batch_size] * [batch_size, aux_dim] = [node_cnt, aux_dim]
+        # [node_cnt, batch_size] * [batch_size, aux_dim] = [node_cnt, aux_dim]
         rep_aux = tf.sparse_tensor_dense_matmul(tf.cast(self.rep_global, tf.float32), self.aux_input)
 
         #if reg_hidden == 0: , [[node_cnt, 2 * embed_dim], [node_cnt, aux_dim]] = [node_cnt, 2*embed_dim + aux_dim]
@@ -330,11 +329,10 @@ class FINDER:
         last_output = tf.concat([last_output,rep_aux],1)
 
         #if reg_hidden == 0: , [node_cnt, 2 * embed_dim + aux_dim] * [2 * embed_dim + aux_dim, 1] = [node_cnt，1]
-        #f reg_hidden > 0: , [node_cnt, reg_hidden + aux_dim] * [reg_hidden + aux_dim, 1] = [node_cnt，1]
+        #if reg_hidden > 0: , [node_cnt, reg_hidden + aux_dim] * [reg_hidden + aux_dim, 1] = [node_cnt，1]
         q_on_all = tf.matmul(last_output, last_w)
 
         return loss, trainStep, q_pred, q_on_all, tf.trainable_variables()
-
 
     def gen_graph(self, num_min, num_max):
         cdef int max_n = num_max
@@ -367,7 +365,7 @@ class FINDER:
         self.ngraph_test = 0
         self.TestSet.Clear()
 
-    def InsertGraph(self,g,is_test):
+    def InsertGraph(self,g,is_test): # 在训练集或者测试集中插入图
         cdef int t
         if is_test:
             t = self.ngraph_test
@@ -409,11 +407,12 @@ class FINDER:
                         self.nStepReplayMem.Add(self.env_list[i], n_step)
                         #print ('add experience transition!')
                     g_sample= TrainSet.Sample()
-                    self.env_list[i].s0(g_sample)
+                    self.env_list[i].s0(g_sample) # 从训练集合中 随机一个图 初始化 MvcEnv 
                     self.g_list[i] = self.env_list[i].graph
             if n >= num_seq:
                 break
 
+            # 所有 pred [gsize, nodesize]
             Random = False
             if random.uniform(0,1) >= eps:
                 pred = self.PredictWithCurrentQNet(self.g_list, [env.action_list for env in self.env_list])
@@ -422,10 +421,11 @@ class FINDER:
 
             for i in range(num_env):
                 if (Random):
-                    a_t = self.env_list[i].randomAction()
+                    a_t = self.env_list[i].randomAction() # 返回的节点的信息
                 else:
-                    a_t = self.argMax(pred[i])
+                    a_t = self.argMax(pred[i]) # 返回每一个 env(对应一张图)中pred最高的Q值的index
                 self.env_list[i].step(a_t)
+                
     #pass
     def PlayGame(self,int n_traj, double eps):
         self.Run_simulator(n_traj, eps, self.TrainSet, N_STEP)
@@ -454,7 +454,7 @@ class FINDER:
         self.inputs['aux_input'] = prepareBatchGraph.aux_feat
         return prepareBatchGraph.idx_map_list
 
-    def Predict(self,g_list,covered,isSnapSnot):
+    def Predict(self,g_list,covered,isSnapSnot): # 对所有的图进行预测Q值?
         cdef int n_graphs = len(g_list)
         cdef int i, j, k, bsize
         for i in range(0, n_graphs, BATCH_SIZE):
@@ -477,10 +477,10 @@ class FINDER:
                 result = self.session.run([self.q_on_allT], feed_dict = my_dict)
             else:
                 result = self.session.run([self.q_on_all], feed_dict = my_dict)
-            raw_output = result[0]
+            raw_output = result[0] # session中测出来的Q值
             pos = 0
             pred = []
-            for j in range(i, i + bsize):
+            for j in range(i, i + bsize): # j表示的在图集合中 图的index
                 idx_map = idx_map_list[j-i]
                 cur_pred = np.zeros(len(idx_map))
                 for k in range(len(idx_map)):
@@ -493,7 +493,7 @@ class FINDER:
                     cur_pred[k] = -inf
                 pred.append(cur_pred)
             assert (pos == len(raw_output))
-        return pred
+        return pred # 保存的是Q_pred
 
     def PredictWithCurrentQNet(self,g_list,covered):
         result = self.Predict(g_list,covered,False)
@@ -705,7 +705,7 @@ class FINDER:
             print ('number of nodes:%d'%(nx.number_of_nodes(g)))
             print ('number of edges:%d'%(nx.number_of_edges(g)))
             if stepRatio > 0:
-                step = np.max([int(stepRatio*nx.number_of_nodes(g)),1]) #step size
+                step = np.max([int(stepRatio*nx.number_of_nodes(g)),1]) # step size
             else:
                 step = 1
             self.InsertGraph(g, is_test=True)
@@ -761,7 +761,7 @@ class FINDER:
         if strategyID > 0:
             start = time.time()
             if reInsertStep > 0 and reInsertStep < 1:
-                step = np.max([int(reInsertStep*nx.number_of_nodes(g)),1]) #step size
+                step = np.max([int(reInsertStep*nx.number_of_nodes(g)),1]) # step size
             else:
                 step = reInsertStep
             sol_reinsert = self.utils.reInsert(g_inner, sol, sol_left, strategyID, step)

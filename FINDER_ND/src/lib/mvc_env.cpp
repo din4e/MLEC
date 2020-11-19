@@ -10,17 +10,17 @@
 
 MvcEnv::MvcEnv(double _norm)
 {
-norm = _norm;
-graph = nullptr;
-numCoveredEdges = 0;
-CcNum = 1.0;
-state_seq.clear();
-act_seq.clear();
-action_list.clear();
-reward_seq.clear();
-sum_rewards.clear();
-covered_set.clear();
-avail_list.clear();
+    norm = _norm;
+    graph = nullptr;
+    numCoveredEdges = 0;
+    CcNum = 1.0;
+    state_seq.clear();
+    act_seq.clear();
+    action_list.clear();
+    reward_seq.clear();
+    sum_rewards.clear();
+    covered_set.clear();
+    avail_list.clear();
 }
 
 MvcEnv::~MvcEnv()
@@ -51,7 +51,6 @@ void MvcEnv::s0(std::shared_ptr<Graph> _g)
 }
 
 double MvcEnv::step(int a)
-
 {
     assert(graph);
     assert(covered_set.count(a) == 0);
@@ -68,16 +67,14 @@ double MvcEnv::step(int a)
             numCoveredEdges++;
     
 //    double r_t = getReward(oldCcNum);
-    double r_t = getReward();
+    double r_t = getReward(); // -GCC()/(nsize*nsize)
     reward_seq.push_back(r_t);
     sum_rewards.push_back(r_t);  
 
     return r_t;
 }
 
-
 void MvcEnv::stepWithoutReward(int a)
-
 {
     assert(graph);
     assert(covered_set.count(a) == 0);
@@ -88,7 +85,6 @@ void MvcEnv::stepWithoutReward(int a)
             numCoveredEdges++;
 }
 
-
 // random
 int MvcEnv::randomAction()
 {
@@ -96,12 +92,10 @@ int MvcEnv::randomAction()
     avail_list.clear();
 
     for (int i = 0; i < graph->num_nodes; ++i)
-        if (covered_set.count(i) == 0)
-        {
+        if (covered_set.count(i) == 0){
             bool useful = false;
-            for (auto neigh : graph->adj_list[i])
-                if (covered_set.count(neigh) == 0)
-                {
+            for (auto &neigh : graph->adj_list[i])
+                if (covered_set.count(neigh) == 0){
                     useful = true;
                     break;
                 }
@@ -141,8 +135,7 @@ int MvcEnv::randomAction()
 //    return maxID;
 //}
 
-
- //betweenness
+////betweenness
 //int MvcEnv::randomAction()
 //{
 //    assert(graph);
@@ -222,16 +215,11 @@ int MvcEnv::betweenAction()
     std::vector<std::vector<int>> adj_list_reID;
 
 
-    for (int i = 0; i < graph->num_nodes; ++i)
-    {
-        if (covered_set.count(i) == 0)
-        {
-            for (auto neigh : graph->adj_list[i])
-            {
-                if (covered_set.count(neigh) == 0)
-                {
-                   if(adj_dic_origin.find(i) != adj_dic_origin.end())
-                   {
+    for (int i = 0; i < graph->num_nodes; ++i){
+        if (covered_set.count(i) == 0){
+            for (auto neigh : graph->adj_list[i]){
+                if (covered_set.count(neigh) == 0){
+                   if(adj_dic_origin.find(i) != adj_dic_origin.end()){
                        adj_dic_origin[i].push_back(neigh);
                    }
                    else{
@@ -242,32 +230,29 @@ int MvcEnv::betweenAction()
                 }
             }
         }
-
     }
 
 
-     std::map<int, std::vector<int>>::iterator iter;
-     iter = adj_dic_origin.begin();
+    std::map<int, std::vector<int>>::iterator iter;
+    iter = adj_dic_origin.begin();
 
-     int numrealnodes = 0;
-     while(iter != adj_dic_origin.end())
-     {
+    int numrealnodes = 0;
+    while(iter != adj_dic_origin.end()){
         id2node[numrealnodes] = iter->first;
         node2id[iter->first] = numrealnodes;
         numrealnodes += 1;
         iter++;
-     }
+    }
 
-     adj_list_reID.resize(adj_dic_origin.size());
+    adj_list_reID.resize(adj_dic_origin.size());
 
-     iter = adj_dic_origin.begin();
-     while(iter != adj_dic_origin.end())
-     {
+    iter = adj_dic_origin.begin();
+    while(iter != adj_dic_origin.end()){
         for(int i=0;i<(int)iter->second.size();++i){
             adj_list_reID[node2id[iter->first]].push_back(node2id[iter->second[i]]);
         }
         iter++;
-     }
+    }
 
 
     std::vector<double> BC = Betweenness(adj_list_reID);
@@ -285,8 +270,7 @@ bool MvcEnv::isTerminal()
     return graph->num_edges == numCoveredEdges;
 }
 
-
-double MvcEnv::getReward()
+double MvcEnv::getReward() // -GCC()/(nsize*nsize)
 {
     return -(double)getMaxConnectedNodesNum()/(graph->num_nodes*graph->num_nodes);
 }
@@ -301,23 +285,19 @@ void MvcEnv::printGraph()
 {
     printf("edge_list:\n");
     printf("[");
-    for (int i = 0; i < (int)graph->edge_list.size();i++)
-    {
-    printf("[%d,%d],",graph->edge_list[i].first,graph->edge_list[i].second);
+    for (int i = 0; i < (int)graph->edge_list.size();i++){
+        printf("[%d,%d],",graph->edge_list[i].first,graph->edge_list[i].second);
     }
     printf("]\n");
-
 
     printf("covered_set:\n");
 
     std::set<int>::iterator it;
     printf("[");
-    for (it=covered_set.begin();it!=covered_set.end();it++)
-    {
+    for (it=covered_set.begin();it!=covered_set.end();it++){
         printf("%d,",*it);
     }
     printf("]\n");
-
 }
 
 double MvcEnv::getNumofConnectedComponents()
@@ -325,19 +305,16 @@ double MvcEnv::getNumofConnectedComponents()
     assert(graph);
     Disjoint_Set disjoint_Set =  Disjoint_Set(graph->num_nodes);
 
-    for (int i = 0; i < graph->num_nodes; i++)
-    {
-        if (covered_set.count(i) == 0)
-        {
-            for (auto neigh : graph->adj_list[i])
-            {
-                if (covered_set.count(neigh) == 0)
-                {
+    for (int i = 0; i < graph->num_nodes; i++){
+        if (covered_set.count(i) == 0){
+            for (auto &neigh : graph->adj_list[i]){
+                if (covered_set.count(neigh) == 0){
                     disjoint_Set.merge(i, neigh);
                 }
             }
         }
     }
+
     std::set<int> lccIDs;
     for(int i =0;i< graph->num_nodes; i++){
         lccIDs.insert(disjoint_Set.unionSet[i]);
@@ -345,19 +322,15 @@ double MvcEnv::getNumofConnectedComponents()
     return (double)lccIDs.size();
 }
 
-double MvcEnv::getMaxConnectedNodesNum()
+double MvcEnv::getMaxConnectedNodesNum()  // 使用并查集获得最大连通分量的节点数
 {
     assert(graph);
     Disjoint_Set disjoint_Set =  Disjoint_Set(graph->num_nodes);
 
-    for (int i = 0; i < graph->num_nodes; i++)
-    {
-        if (covered_set.count(i) == 0)
-        {
-            for (auto neigh : graph->adj_list[i])
-            {
-                if (covered_set.count(neigh) == 0)
-                {
+    for (int i = 0; i < graph->num_nodes; i++){
+        if (covered_set.count(i) == 0){
+            for (auto neigh : graph->adj_list[i]){
+                if (covered_set.count(neigh) == 0){
                     disjoint_Set.merge(i, neigh);
                 }
             }
@@ -365,7 +338,6 @@ double MvcEnv::getMaxConnectedNodesNum()
     }
     return (double)disjoint_Set.maxRankCount;
 }
-
 
 std::vector<double> MvcEnv::Betweenness(std::vector< std::vector <int> > adj_list) {
 

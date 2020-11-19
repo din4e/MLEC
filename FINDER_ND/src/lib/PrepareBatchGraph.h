@@ -57,8 +57,8 @@ public:
     std::shared_ptr<sparseMatrix>      subgsum_param; //
     std::vector<std::vector<int>>       idx_map_list; // 是一个返回值 但不知道是什么
     std::vector<std::pair<int,int>> subgraph_id_span; //
-    std::vector<std::vector<double>>        aux_feat; // [gszie,(nodesize+1+1+1)]
-    GraphStruct                                graph;
+    std::vector<std::vector<double>>        aux_feat; // [gsize,(nodesize+1+1+1)]
+    GraphStruct                                graph; // ?把所有图当作子图 看成一个大网络
     std::vector<int>                   avail_act_cnt; // ?
     int                                 aggregatorID; // 图嵌入的算法 0 sum 1 mean 2 GCN
 };

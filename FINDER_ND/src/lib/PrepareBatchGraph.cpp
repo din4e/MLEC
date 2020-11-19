@@ -100,11 +100,12 @@ void PrepareBatchGraph::SetupGraphInput(std::vector<int>          idxes,
     avail_act_cnt.resize(idxes.size());
 
     int node_cnt = 0;
-
-    for (size_t i = 0; i < (int)idxes.size(); ++i){
+    
+    // 对每一张图 idx 进行遍历 计算对应 act_select()
+    for (size_t i = 0; i < (int)idxes.size(); ++i){ 
         std::vector<double> temp_feat;
 
-        auto g = g_list[idxes[i]];
+        auto &g = g_list[idxes[i]];
 
         int counter;
         int twohop_number;
@@ -139,8 +140,8 @@ void PrepareBatchGraph::SetupGraphInput(std::vector<int>          idxes,
     int edge_cnt = 0;
 
     for (size_t i = 0; i < (int)idxes.size(); ++i){            
-        auto g = g_list[idxes[i]];
-        auto idx_map = idx_map_list[i];
+        auto &g = g_list[idxes[i]];
+        auto &idx_map = idx_map_list[i];
 
         int t = 0;
         for (int j = 0; j < g->num_nodes; ++j){
