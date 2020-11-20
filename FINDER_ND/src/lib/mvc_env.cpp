@@ -278,7 +278,6 @@ double MvcEnv::getReward() // -GCC()/(nsize*nsize)
 //double MvcEnv::getReward(double oldCcNum)
 //{
 //    return (CcNum - oldCcNum) / CcNum*graph->num_nodes ;
-//
 //}
 
 void MvcEnv::printGraph()

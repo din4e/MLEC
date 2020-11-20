@@ -53,9 +53,8 @@ cdef double inf = 2147483647/2
 
 #########################  embedding method ##########################################################
 cdef int max_bp_iter = 3       # 不是说好的5层的嘛
-cdef int aggregatorID = 0      #0:sum; 1:mean; 2:GCN
-cdef int embeddingMethod = 1   #0:structure2vec; 1:graphsage
-
+cdef int aggregatorID = 0      # 0:sum; 1:mean; 2:GCN
+cdef int embeddingMethod = 1   # 0:structure2vec; 1:graphsage
 
 class FINDER:
 
@@ -63,7 +62,7 @@ class FINDER:
         # init some parameters
         self.embedding_size = EMBEDDING_SIZE
         self.learning_rate = LEARNING_RATE
-        self.g_type = 'barabasi_albert' #erdos_renyi, powerlaw, small-world
+        self.g_type = 'barabasi_albert' # erdos_renyi, powerlaw, small-world
         self.TrainSet = graph.py_GSet()
         self.TestSet = graph.py_GSet()
         self.inputs = dict()
@@ -128,7 +127,7 @@ class FINDER:
         # saving and loading networks
         self.saver = tf.train.Saver(max_to_keep=None)
         # self.session = tf.InteractiveSession()
-        config = tf.ConfigProto(device_count={"CPU": 8},  # limit to num_cpu_core CPU usage
+        config = tf.ConfigProto(device_count={"CPU": 2},  # limit to num_cpu_core CPU usage
                                 inter_op_parallelism_threads=100,
                                 intra_op_parallelism_threads=100,
                                 log_device_placement=False)
@@ -174,8 +173,8 @@ class FINDER:
         ## [embed_dim, 1]
         cross_product = tf.Variable(tf.truncated_normal([self.embedding_size, 1], stddev=initialization_stddev), tf.float32)
 
-        #[node_cnt, 2]
         nodes_size = tf.shape(self.n2nsum_param)[0]
+        # [node_cnt, 2]
         node_input = tf.ones((nodes_size,2))
 
         y_nodes_size = tf.shape(self.subgsum_param)[0]
@@ -187,22 +186,20 @@ class FINDER:
 
         #[node_cnt, embed_dim]  # no sparse
         input_potential_layer = tf.nn.relu(input_message)
+        #input_potential_layer = input_message
 
-        # no sparse
-        # [batch_size, embed_dim]
+        # [batch_size, embed_dim] # no sparse
         y_input_message = tf.matmul(tf.cast(y_node_input,tf.float32), w_n2l)
-        # [batch_size, embed_dim]  # no sparse
+        # [batch_size, embed_dim] # no sparse
         y_input_potential_layer = tf.nn.relu(y_input_message)
 
-        #input_potential_layer = input_message
         cdef int lv = 0
-        #[node_cnt, embed_dim], no sparse
+        # [node_cnt, embed_dim] # no sparse
         cur_message_layer = input_potential_layer
         cur_message_layer = tf.nn.l2_normalize(cur_message_layer, axis=1)
 
-        #[batch_size, embed_dim], no sparse
+        # [batch_size, embed_dim] # no sparse
         y_cur_message_layer = y_input_potential_layer
-        # [batch_size, embed_dim]
         y_cur_message_layer = tf.nn.l2_normalize(y_cur_message_layer, axis=1)
 
         while lv < max_bp_iter:
@@ -229,14 +226,15 @@ class FINDER:
                 #[batch_size, embed_dim]
                 y_cur_message_layer = tf.nn.relu(y_merged_linear)
             else:   # 'graphsage'
-                #[node_cnt, embed_dim] * [embed_dim, embed_dim] = [node_cnt, embed_dim], dense
+                # cur_message 
+                # [node_cnt, embed_dim] * [embed_dim, embed_dim] = [node_cnt, embed_dim], dense
                 cur_message_layer_linear = tf.matmul(tf.cast(cur_message_layer, tf.float32), p_node_conv2)
-
                 #[[node_cnt, embed_dim] [node_cnt, embed_dim]] = [node_cnt, 2*embed_dim], return tensed matrix
                 merged_linear = tf.concat([node_linear, cur_message_layer_linear], 1)
                 #[node_cnt, 2*embed_dim]*[2*embed_dim, embed_dim] = [node_cnt, embed_dim]
                 cur_message_layer = tf.nn.relu(tf.matmul(merged_linear, p_node_conv3))
 
+                # y_cur_message
                 #[batch_size, embed_dim] * [embed_dim, embed_dim] = [batch_size, embed_dim], dense
                 y_cur_message_layer_linear = tf.matmul(tf.cast(y_cur_message_layer, tf.float32), p_node_conv2)
                 #[[batch_size, embed_dim] [batch_size, embed_dim]] = [batch_size, 2*embed_dim], return tensed matrix
@@ -244,7 +242,9 @@ class FINDER:
                 #[batch_size, 2*embed_dim]*[2*embed_dim, embed_dim] = [batch_size, embed_dim]
                 y_cur_message_layer = tf.nn.relu(tf.matmul(y_merged_linear, p_node_conv3))
 
-            cur_message_layer = tf.nn.l2_normalize(cur_message_layer, axis=1)
+            # [node_cnt, embed_dim] # ? Z_a
+            cur_message_layer = tf.nn.l2_normalize(cur_message_layer, axis=1) 
+            # [batch_size, embed_dim] # ? Z_s
             y_cur_message_layer = tf.nn.l2_normalize(y_cur_message_layer, axis=1)
 
         self.node_embedding = cur_message_layer
@@ -256,7 +256,7 @@ class FINDER:
 
         # embed_s_a = tf.concat([action_embed,y_potential],1)
 
-        # # [batch_size, embed_dim, embed_dim]
+        # [batch_size, embed_dim, embed_dim]
         temp = tf.matmul(tf.expand_dims(action_embed, axis=2),tf.expand_dims(y_potential, axis=1))
         # [batch_size, embed_dim]
         Shape = tf.shape(action_embed)
@@ -306,7 +306,7 @@ class FINDER:
 
         # [node_cnt, embed_dim, embed_dim]
         temp1 = tf.matmul(tf.expand_dims(cur_message_layer, axis=2),tf.expand_dims(rep_y, axis=1))
-        # [node_cnt embed_dim]
+        # [node_cnt, embed_dim]
         Shape1 = tf.shape(cur_message_layer)
         # [batch_size, embed_dim], first transform
         embed_s_a_all = tf.reshape(tf.matmul(temp1, tf.reshape(tf.tile(cross_product,[Shape1[0],1]),[Shape1[0],Shape1[1],1])),Shape1)
