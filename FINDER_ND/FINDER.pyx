@@ -21,6 +21,7 @@ import nstep_replay_mem_prioritized
 import mvc_env
 import utils
 import os
+import EC
 
 # Hyper Parameters:
 cdef double GAMMA = 1  # decay rate of past observations
@@ -648,7 +649,6 @@ class FINDER:
             self.Fit()
         f_out.close()
 
-
     def findModel(self):
         VCFile = './models/%s/ModelVC_%d_%d.csv'%(self.g_type, NUM_MIN, NUM_MAX)
         vc_list = []
@@ -659,7 +659,6 @@ class FINDER:
         best_model_iter = 300 * min_vc
         best_model = './models/%s/nrange_%d_%d_iter_%d.ckpt' % (self.g_type, NUM_MIN, NUM_MAX, best_model_iter)
         return best_model
-
 
     def Evaluate(self, data_test, model_file=None):
         if model_file == None:  #if user do not specify the model_file
@@ -688,6 +687,41 @@ class FINDER:
         time_std = np.std(result_list_time)
         return  score_mean, score_std, time_mean, time_std
 
+    def getGraphAndSol(self, data_test, model_file=None):
+        #if model_file == None:  #if user do not specify the model_file
+        #    model_file = self.findModel()
+        # print ('The best model is :%s'%(model_file))
+        sys.stdout.flush()
+        self.LoadModel(model_file)
+        cdef int n_test = 100
+        cdef int i
+        result_list_score = []
+        result_list_time = []
+        sys.stdout.flush()
+        # for i in tqdm(range(n_test)):
+        for i in tqdm(range(n_test)):
+            t1 = time.time()
+            g_path = '%s/'%data_test + 'g_%d'%i
+            g = nx.read_gml(g_path)
+            self.InsertGraph(g, is_test=True)
+            val, sol = self.GetSol(i)
+
+            a = np.array(nx.adjacency_matrix(g,weight="None").todense())
+
+            ec_g = EC.ECGraph(a.shape[0],a)
+            print(a.shape, ec_g.Lambda)
+            ec = EC.EC(a, ec_g.Lambda * 0.3)
+
+            s  = ec.HDG()
+            s2 = ec.FINDER(sol)
+            t2 = time.time()
+            if s.Cost<s2.Cost:
+                print("Findit")
+                print("hdg cost: ",s.Cost,"FINDER cost: ",s2.Cost)
+            result_list_score.append(val)
+            result_list_time.append(t2-t1)
+        self.ClearTestGraphs()
+        return g,sol
 
     def EvaluateRealData(self, model_file, data_test, save_dir, stepRatio=0.0025):  #测试真实数据
         cdef double solution_time = 0.0
@@ -813,7 +847,6 @@ class FINDER:
         solution = sol + list(set(nodes)^set(sol))
         Robustness = self.utils.getRobustness(g_list[0], solution)
         return Robustness, sol
-
 
     def SaveModel(self,model_path):
         self.saver.save(self.session, model_path)

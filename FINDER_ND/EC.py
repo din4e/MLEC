@@ -34,7 +34,7 @@ def getLambda(a = [[]], x = []) -> float:
         return 0.0
     return Lambda
 
-class Graph:
+class ECGraph:
     def __init__(self, n, a=[[]]):
         self.N = n
         self.a = copy.deepcopy(a)
@@ -48,9 +48,11 @@ class Graph:
     def size(self) -> int:
         return self.N
 
+    # FIXME
     def getVerticeAndEdge(self, a):
-        for i in range(self.N-1):
-            for j in range(i+1, self.N):
+        # print(self.N)
+        for i in range(self.N-2):
+            for j in range(i+1, self.N-1):
                 if a[i][j] == 1 or a[i][j]==1.0:
                     self.vertices[i].append(j)
                     self.vertices[j].append(i)
@@ -104,7 +106,7 @@ class EC:
     # a:numpy
     def __init__(self, a, T:float):
         self.N = a.shape[0]  # tensor -> list
-        self.G = copy.deepcopy(Graph(self.N, a))
+        self.G = copy.deepcopy(ECGraph(self.N, a))
         self.a = copy.deepcopy(self.G.a)
         self.Lambda = 0.0
         self.T = T
@@ -137,21 +139,35 @@ class EC:
         x = [0 for _ in range(self.N)]
         # Lambda = self.getLambda([],x)
         # self.G.printV() # print(Lambda)
-        if len(pi) != self.N:
-            return [], -1.0
+        #if len(pi) != self.N: # for FINDER is
+        #    return [], -1.0
         if len(rho) == 0:
             rho = list(reversed(pi))
+        # print("pi:")
         for p in pi:
-            x[p] = 1  # print(p) # noerror print(p,x)
+            x[p] = 1   
+            # print(p,end=" ") # noerror print(p,x)
             if self.getLambda([], x) < self.T:
-                break  # print(x, self.getLambda([], x),self.T,'/')
+                # print()
+                # print(x, self.getLambda([], x),self.T,'/')
+                break  
+        # print("rho:")
         for r in rho:
             if x[r] == 1 or x[r] == 1.0:
-                # print(r)
+                # print(r,end=' ')
                 x[r] = 0
                 x[r] = 1 if self.getLambda([], x) >= self.T else 0 # print(x, self.getLambda([], x), self.T)
-        # print(type(x))
+        # print("\nendof IterSecure")
+        # print(x)
         return x, self.getLambda([], x)
+
+    def FINDER(self,sol):
+        sol=list(sol)
+        rho = list(reversed(sol))
+        x, Lambda = self.iterativesecure(sol, rho)
+        if not self.isNE(x):
+            print("ERROR")
+        return Strategy(2, x, Lambda)
 
     def HDG(self):
         l = []
@@ -189,7 +205,7 @@ class ECDataset(Dataset):
         # self.hdg = []
         # for data in self.data:
         #     a = data.numpy()
-        #     G = Graph(N, a)
+        #     G = ECGraph(N, a)
         #     ec = EC(a, G.Lambda * 0.5)  # 根据邻接矩阵a 获得图的点边信息 以及ECGame相关的参数
         #     s = ec.HDG()  # Strategy([1, 0, 0, 1, 1])
         #     self.hdg.append(s.X)
@@ -205,7 +221,7 @@ def getHDG(x):
     hdglist = []
     for data in x:
         a = data.numpy()
-        G = Graph(N, a)
+        G = ECGraph(N, a)
         ec = EC(a, G.Lambda * 0.5)  # 根据邻接矩阵a 获得图的点边信息 以及ECGame相关的参数
         s = ec.HDG()  # Strategy([1, 0, 0, 1, 1])
         hdglist.append(s.X)
@@ -246,7 +262,7 @@ class CNN(nn.Module):
         #     l.sort(key=lambda v: v[1], reverse=False)
         #     pi = [v[0] for v in l]
         #     rho = list(reversed(pi))
-        #     G = Graph(N, a.numpy())  # 根据邻接矩阵a 获得图的点边信息
+        #     G = ECGraph(N, a.numpy())  # 根据邻接矩阵a 获得图的点边信息
         #     ec = EC(a, G.Lambda * 0.5)  # 根据邻接矩阵a 获得图的点边信息 以及ECGame相关的参数
         #     xx, Lambda = ec.iterativesecure(pi, rho)  # Strategy([1, 0, 0, 1, 1])
         #     if not ec.isNE(xx):
@@ -271,7 +287,7 @@ if __name__ == '__main__':
     # for i in range(len(train_data)):
     #     a, y = train_data[i]
     #     # a, _ =   # 根据traindata/testdata获取邻接矩阵
-    #     G = Graph(N, a)  # 根据邻接矩阵a 获得图的点边信息
+    #     G = ECGraph(N, a)  # 根据邻接矩阵a 获得图的点边信息
     #     ec = EC(a, G.Lambda * 0.5)  # 根据邻接矩阵a 获得图的点边信息 以及ECGame相关的参数
     #     s = ec.HDG()  # Strategy([1, 0, 0, 1, 1])
     #     # y=int(y)
@@ -303,7 +319,7 @@ if __name__ == '__main__':
     # print("数组的维度数目", a.shape[0])
     # print(a)
     # a, _ = train_data[0]
-    # G = Graph(N, a)  #  根据邻接矩阵a 获得图的点边信息
+    # G = ECGraph(N, a)  #  根据邻接矩阵a 获得图的点边信息
     # # print(G.Lambda)
     # ec = EC(a, G.Lambda*0.5)  #  根据邻接矩阵a 获得图的点边信息 以及ECGame相关的参数
     # s = ec.HDG()  # Strategy([1, 0, 0, 1, 1])
@@ -343,7 +359,7 @@ if __name__ == '__main__':
             #     l.sort(key=lambda v: v[1], reverse=True)
             #     pi = [v[0] for v in l]
             #     rho = list(reversed(pi))
-            #     G = Graph(N, a)  # 根据邻接矩阵a 获得图的点边信息
+            #     G = ECGraph(N, a)  # 根据邻接矩阵a 获得图的点边信息
             #     ec = EC(a, G.Lambda * 0.5)  # 根据邻接矩阵a 获得图的点边信息 以及ECGame相关的参数
             #     xx, Lambda = ec.iterativesecure(pi, rho)  # Strategy([1, 0, 0, 1, 1])
             #     out_is.append(xx)
@@ -368,7 +384,7 @@ if __name__ == '__main__':
                     l.sort(key=lambda v: v[1], reverse=True)
                     pi = [v[0] for v in l]
                     rho = list(reversed(pi))
-                    G = Graph(N, a.numpy())  # 根据邻接矩阵a 获得图的点边信息
+                    G = ECGraph(N, a.numpy())  # 根据邻接矩阵a 获得图的点边信息
                     ec = EC(a, G.Lambda * 0.5)  # 根据邻接矩阵a 获得图的点边信息 以及ECGame相关的参数
                     xx, Lambda = ec.iterativesecure(pi, rho)  # Strategy([1, 0, 0, 1, 1])
                     _y_is.append(xx)
