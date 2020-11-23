@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 """
 Created on Tue Dec 19 00:33:33 2017
-
 @author: fanchangjun
 """
 
@@ -698,30 +697,35 @@ class FINDER:
         result_list_score = []
         result_list_time = []
         sys.stdout.flush()
-        # for i in tqdm(range(n_test)):
+
+        eq, le, ge = 0, 0, 0
+        # for i in range(n_test):
         for i in tqdm(range(n_test)):
-            t1 = time.time()
+            # t1 = time.time()
             g_path = '%s/'%data_test + 'g_%d'%i
             g = nx.read_gml(g_path)
             self.InsertGraph(g, is_test=True)
-            val, sol = self.GetSol(i)
+            sol = self.GetSolEC(i)
 
-            a = np.array(nx.adjacency_matrix(g,weight="None").todense())
-
+            a = np.array(nx.adjacency_matrix(g ,weight="None").todense())
             ec_g = EC.ECGraph(a.shape[0],a)
-            print(a.shape, ec_g.Lambda)
+            #print(a.shape, ec_g.Lambda)
             ec = EC.EC(a, ec_g.Lambda * 0.3)
 
             s  = ec.HDG()
             s2 = ec.FINDER(sol)
-            t2 = time.time()
+            if s.Cost==s2.Cost:
+                eq = eq + 1
             if s.Cost<s2.Cost:
-                print("Findit")
-                print("hdg cost: ",s.Cost,"FINDER cost: ",s2.Cost)
-            result_list_score.append(val)
-            result_list_time.append(t2-t1)
+                le = le + 1
+                # print("Findit")
+                # print("hdg cost: ",s.Cost,"FINDER cost: ",s2.Cost)
+            if s.Cost>s2.Cost:
+                ge = ge + 1
+            # t2 = time.time()
+            # print("cost hdg %d cost FINDER %d"%(s.Cost,s2.Cost))
         self.ClearTestGraphs()
-        return g,sol
+        return le,eq,ge
 
     def EvaluateRealData(self, model_file, data_test, save_dir, stepRatio=0.0025):  #测试真实数据
         cdef double solution_time = 0.0
@@ -847,6 +851,27 @@ class FINDER:
         solution = sol + list(set(nodes)^set(sol))
         Robustness = self.utils.getRobustness(g_list[0], solution)
         return Robustness, sol
+
+    def GetSolEC(self, int gid, int step=2):
+        g_list = []
+        self.test_env.s0(self.TestSet.Get(gid))
+        g_list.append(self.test_env.graph)
+        cdef double cost = 0.0
+        sol = []
+        cdef int new_action
+        while (not self.test_env.isTerminal()):
+            list_pred = self.PredictWithCurrentQNet(g_list, [self.test_env.action_list])
+            batchSol = np.argsort(-list_pred[0])[:step]
+            for new_action in batchSol:
+                if not self.test_env.isTerminal():
+                    self.test_env.stepWithoutReward(new_action)
+                    sol.append(new_action)
+                else:
+                    break
+        nodes = list(range(g_list[0].num_nodes))
+        solution = sol + list(set(nodes)^set(sol))
+        # Robustness = self.utils.getRobustness(g_list[0], solution)
+        return sol
 
     def SaveModel(self,model_path):
         self.saver.save(self.session, model_path)

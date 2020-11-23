@@ -9,15 +9,15 @@ from torch.autograd import Variable
 from torch.utils.data import Dataset, DataLoader
 import matplotlib.pyplot as plt
 
-EPOCH = 5
+EPOCH = 5           
 BATCH_SIZE = 100
 LR = 0.01  # 学习率
 N = 20  # 节点数目
 zero = torch.zeros(BATCH_SIZE, N)
 one = torch.ones(BATCH_SIZE, N)
 train_data_path = r'dataset/traindata10000_20hdg.txt'
-test_data_path = r'dataset/testdata10000_20hdg.txt'
-figure_name = r'10000_20hdg.png'
+test_data_path  = r'dataset/testdata10000_20hdg.txt'
+figure_name     = r'10000_20hdg.png'
 
 def getLambda(a = [[]], x = []) -> float:
     _a = copy.deepcopy(a)
@@ -48,7 +48,6 @@ class ECGraph:
     def size(self) -> int:
         return self.N
 
-    # FIXME
     def getVerticeAndEdge(self, a):
         # print(self.N)
         for i in range(self.N-2):
@@ -82,7 +81,7 @@ class Strategy:
         self.NEindex = index
         x = np.array(x)
         self.N = x.shape[0]
-        self.X = []  # np.empty(shape=[0, self.N])
+        self.X = []       # np.empty(shape=[0, self.N])
         self.X.append(x)  # 枚举算法可能有多个策略
         self.Cost = 0
         for i in x:
@@ -103,7 +102,6 @@ class Strategy:
             print()
 
 class EC:
-    # a:numpy
     def __init__(self, a, T:float):
         self.N = a.shape[0]  # tensor -> list
         self.G = copy.deepcopy(ECGraph(self.N, a))
@@ -137,34 +135,27 @@ class EC:
 
     def iterativesecure(self, pi, rho=[]):
         x = [0 for _ in range(self.N)]
-        # Lambda = self.getLambda([],x)
-        # self.G.printV() # print(Lambda)
         #if len(pi) != self.N: # for FINDER is
         #    return [], -1.0
-        if len(rho) == 0:
-            rho = list(reversed(pi))
-        # print("pi:")
+        # if len(rho) == 0:
+        #     rho = list(reversed(pi))
+        # print(pi)
+        rho = []
         for p in pi:
-            x[p] = 1   
-            # print(p,end=" ") # noerror print(p,x)
+            x[p] = 1
+            rho.append(p)
             if self.getLambda([], x) < self.T:
-                # print()
                 # print(x, self.getLambda([], x),self.T,'/')
                 break  
-        # print("rho:")
         for r in rho:
-            if x[r] == 1 or x[r] == 1.0:
-                # print(r,end=' ')
-                x[r] = 0
-                x[r] = 1 if self.getLambda([], x) >= self.T else 0 # print(x, self.getLambda([], x), self.T)
-        # print("\nendof IterSecure")
-        # print(x)
+            x[r] = 0
+            # x[r] = 1 if self.getLambda([], x) >= self.T else 0 # print(x, self.getLambda([], x), self.T)
+            if self.getLambda([], x) >= self.T:
+                x[r] = 1
         return x, self.getLambda([], x)
 
     def FINDER(self,sol):
-        sol=list(sol)
-        rho = list(reversed(sol))
-        x, Lambda = self.iterativesecure(sol, rho)
+        x, Lambda = self.iterativesecure(sol)
         if not self.isNE(x):
             print("ERROR")
         return Strategy(2, x, Lambda)
@@ -175,14 +166,13 @@ class EC:
             l.append([i, len(v)])
         l.sort(key = lambda x : x[1], reverse = True )
         pi = [x[0] for x in l]
-        rho = list(reversed(pi))
-        x, Lambda = self.iterativesecure(pi, rho)
+        x, Lambda = self.iterativesecure(pi)
         if not self.isNE(x):
             print("ERROR")
         return Strategy(2, x, Lambda)
 
     def LDG(self):
-        return
+        return 
 
 
 class ECDataset(Dataset):

@@ -8,7 +8,7 @@ from tqdm import tqdm
 def main():
     dqn = FINDER()
     data_test_path = 'data/synthetic/uniform_cost/'
-#     data_test_name = ['30-50', '50-100', '100-200', '200-300', '300-400', '400-500']
+    # data_test_name = ['30-50', '50-100', '100-200', '200-300', '300-400', '400-500']
     data_test_name = ['30-50', '50-100']
     model_file = 'models/nrange_30_50_iter_78000.ckpt'
     
@@ -26,7 +26,6 @@ def main():
             fout.write('%.2f+-%.2f,' % (score_mean * 100, score_std * 100))
             fout.flush()
             print('\ndata_test_%s has been tested!' % data_test_name[i])
-
 
 if __name__=="__main__":
     main()
