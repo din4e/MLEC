@@ -8,6 +8,8 @@ from torch import Tensor
 from torch.autograd import Variable
 from torch.utils.data import Dataset, DataLoader
 import matplotlib.pyplot as plt
+import time
+import math
 
 EPOCH = 5           
 BATCH_SIZE = 100
@@ -19,9 +21,44 @@ train_data_path = r'dataset/traindata10000_20hdg.txt'
 test_data_path  = r'dataset/testdata10000_20hdg.txt'
 figure_name     = r'10000_20hdg.png'
 
+def getL(a)->float:
+    N = len(a)
+    k = 0
+    X = [0.0 for _ in range(N)]
+    Y = [1.0 for _ in range(N)]
+    max1 = 0.0
+    max2 = float(N)
+    m1 = 0.0 
+    m2 = 0.0
+    tmpfloat = 0.0
+    while ((math.fabs(max1 - max2) > 0.001 ) or ( k < 3)):
+        max2 = max1
+        m1 = m2
+        for i in range(N):
+            X[i] = 0.0
+            for j in range(N): 
+                X[i] += a[i][j] * Y[j];
+        tmpfloat = 0.0
+        for x in X:
+            if math.fabs(x) > tmpfloat: 
+                tmpfloat = x 
+        if tmpfloat == 0.0:
+            return  0.0
+        else:
+            for i in range(N):
+                Y[i] = X[i] / tmpfloat;
+            m2 = tmpfloat
+            max1 = math.sqrt(m1*m2)
+            if k > 3000:
+                break
+            else: 
+                k = k + 1
+    return max1
+
 def getLambda(a = [[]], x = []) -> float:
     _a = copy.deepcopy(a)
     n = len(a)
+    t1 = time.time() 
     if n != 0:
         if len(x)!=0:
             for i in range(n):
@@ -30,8 +67,11 @@ def getLambda(a = [[]], x = []) -> float:
                         _a[i][j] = _a[j][i] = 0
         b, _ = np.linalg.eig(_a)
         Lambda = max(b)
+        # Lambda = getL(_a)
     else:
         return 0.0
+    t2 = time.time()
+    print(t2-t1)
     return Lambda
 
 class ECGraph:
@@ -74,7 +114,6 @@ class ECGraph:
         self.printV()
         self.printE()
 
-
 class Strategy:
     def __init__(self, index = 0,x = [], Lambda = 0.0):
         self.NEtype = ['NotNE', 'NE', 'MinNE', 'MaxNE']
@@ -111,15 +150,23 @@ class EC:
 
     def getLambda(self, a = [], x = []) -> float:
         # print(self.G.a)
+        # t1 = time.time()
         if len(a) == 0:
             self.a = copy.deepcopy(self.G.a)
+        # t2 = time.time()
         if len(x) != 0:
             for i in range(len(x)):
                 if x[i] == 1 or x[i] == 1.0:
                     for j in range(self.N):
                         self.a[i][j] = self.a[j][i] = 0
+        # t3 = time.time()
         b, _ = np.linalg.eig(self.a)
+        # t4 = time.time()
         self.Lambda = max(b)
+        # self.Lambda = getL(self.a)
+        # print(self.Lambda,max(b))
+        # t5 = time.time()
+        # print(t5-t1)
         return self.Lambda
 
     def isNE(self, X) -> bool:
@@ -147,6 +194,7 @@ class EC:
             if self.getLambda([], x) < self.T:
                 # print(x, self.getLambda([], x),self.T,'/')
                 break  
+        rho = list(reversed(rho))
         for r in rho:
             x[r] = 0
             # x[r] = 1 if self.getLambda([], x) >= self.T else 0 # print(x, self.getLambda([], x), self.T)
@@ -159,6 +207,13 @@ class EC:
         if not self.isNE(x):
             print("ERROR")
         return Strategy(2, x, Lambda)
+    
+    def FINDER_MAX(self,sol):
+        sol = list(reversed(sol))
+        x, Lambda = self.iterativesecure(sol)
+        if not self.isNE(x):
+            print("ERROR")
+        return Strategy(3, x, Lambda)
 
     def HDG(self):
         l = []
@@ -172,6 +227,15 @@ class EC:
         return Strategy(2, x, Lambda)
 
     def LDG(self):
+        l = []
+        for i, v in enumerate(self.G.vertices):
+            l.append([i, len(v)])
+        l.sort(key = lambda x : x[1], reverse = False)
+        pi = [x[0] for x in l]
+        x, Lambda = self.iterativesecure(pi)
+        if not self.isNE(x):
+            print("ERROR")
+        return Strategy(3, x, Lambda)
         return 
 
 

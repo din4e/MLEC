@@ -1,5 +1,4 @@
-﻿
-from libcpp.vector cimport vector
+﻿from libcpp.vector cimport vector
 from libcpp.set cimport set
 from libcpp.memory cimport shared_ptr
 from libcpp cimport bool
@@ -13,4 +12,3 @@ cdef extern from "./src/lib/utils.h":
         int getMxWccSz(shared_ptr[Graph] graph)
         vector[double] Betweenness(shared_ptr[Graph] graph)
         vector[double] MaxWccSzList
-

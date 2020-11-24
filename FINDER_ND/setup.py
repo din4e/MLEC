@@ -1,6 +1,7 @@
 from distutils.core import setup
 from distutils.extension import Extension
 from Cython.Distutils import build_ext
+import numpy as np
 
 setup(
     cmdclass = {'build_ext':build_ext},
@@ -26,6 +27,10 @@ setup(
         Extension('graph_struct', 
             sources=['graph_struct.pyx', 'src/lib/graph_struct.cpp'], 
             language='c++',extra_compile_args=['-std=c++11']),
+        # Extension('getL', 
+        #     sources=['getL.pyx'], 
+        #     language='c',
+        #     include_dirs=[np.get_include()],),
         Extension('FINDER', 
-            sources = ['FINDER.pyx'])
+            sources = ['FINDER.pyx']),
 ])

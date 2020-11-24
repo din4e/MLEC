@@ -1,0 +1,6 @@
+30-50 better case 0.42 worse case 0.06
+50-100 better case 0.53 worse case 0.03
+100-200 better case 0.60 worse case 0.12
+200-300 better case 0.67 worse case 0.16
+300-400 better case 0.66 worse case 0.15
+400-500 better case 0.73 worse case 0.15

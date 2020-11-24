@@ -127,7 +127,7 @@ class FINDER:
         # saving and loading networks
         self.saver = tf.train.Saver(max_to_keep=None)
         # self.session = tf.InteractiveSession()
-        config = tf.ConfigProto(device_count={"CPU": 2},  # limit to num_cpu_core CPU usage
+        config = tf.ConfigProto(device_count={"CPU": 4},  # limit to num_cpu_core CPU usage
                                 inter_op_parallelism_threads=100,
                                 intra_op_parallelism_threads=100,
                                 log_device_placement=False)
@@ -699,29 +699,50 @@ class FINDER:
         sys.stdout.flush()
 
         eq, le, ge = 0, 0, 0
-        # for i in range(n_test):
-        for i in tqdm(range(n_test)):
-            # t1 = time.time()
+        for i in range(n_test):
+        # for i in tqdm(range(n_test)):
+            #t1 = time.time()
             g_path = '%s/'%data_test + 'g_%d'%i
+            
+            #gen_net =time.time()
+            #print("gen networkx g",gen_net-t1)
+
             g = nx.read_gml(g_path)
             self.InsertGraph(g, is_test=True)
             sol = self.GetSolEC(i)
+            
+            #get_sol =time.time()
+            #print("get sol:",get_sol-gen_net)
 
             a = np.array(nx.adjacency_matrix(g ,weight="None").todense())
             ec_g = EC.ECGraph(a.shape[0],a)
-            #print(a.shape, ec_g.Lambda)
+            
+            #get_g=time.time()
+            #print("get ec g: ",get_g-get_sol)
+
             ec = EC.EC(a, ec_g.Lambda * 0.3)
 
-            s  = ec.HDG()
-            s2 = ec.FINDER(sol)
+            #get_ec=time.time()
+            #print("get ec: ",get_ec-get_g)
+
+            s  = ec.LDG()
+
+            #get_hdg=time.time()
+            #print("get hdg: ",get_hdg-get_ec)
+
+            s2 = ec.FINDER_MAX(sol)
+
+            #get_finder=time.time()
+            #print("get finder: ",get_finder-get_hdg)
+            
             if s.Cost==s2.Cost:
                 eq = eq + 1
             if s.Cost<s2.Cost:
                 le = le + 1
                 # print("Findit")
-                # print("hdg cost: ",s.Cost,"FINDER cost: ",s2.Cost)
             if s.Cost>s2.Cost:
                 ge = ge + 1
+            print("ldg cost: ",s.Cost,"FINDER cost: ",s2.Cost)
             # t2 = time.time()
             # print("cost hdg %d cost FINDER %d"%(s.Cost,s2.Cost))
         self.ClearTestGraphs()
