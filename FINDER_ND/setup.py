@@ -27,10 +27,10 @@ setup(
         Extension('graph_struct', 
             sources=['graph_struct.pyx', 'src/lib/graph_struct.cpp'], 
             language='c++',extra_compile_args=['-std=c++11']),
-        # Extension('getL', 
-        #     sources=['getL.pyx'], 
-        #     language='c',
-        #     include_dirs=[np.get_include()],),
+        Extension('getL', 
+            sources=['getL.pyx', 'src/lib/getL.cpp'],
+            language='c++',extra_compile_args=['-std=c++11']),
         Extension('FINDER', 
             sources = ['FINDER.pyx']),
-])
+    ]
+)

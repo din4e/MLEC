@@ -12,10 +12,10 @@ import time
 import math
 from getL import getL
 
-EPOCH = 5           
-BATCH_SIZE = 100
-LR = 0.01  # 学习率
-N = 20  # 节点数目
+cdef int EPOCH = 5           
+cdef int BATCH_SIZE = 100
+cdef double LR = 0.01  # 学习率
+cdef N = 20  # 节点数目
 zero = torch.zeros(BATCH_SIZE, N)
 one = torch.ones(BATCH_SIZE, N)
 train_data_path = r'dataset/traindata10000_20hdg.txt'
@@ -58,7 +58,7 @@ figure_name     = r'10000_20hdg.png'
 
 def getLambda(a = [[]], x = []) -> float:
     _a = copy.deepcopy(a)
-    n = len(a)
+    cdef int n = len(a)
     # t1 = time.time()
     if n != 0:
         if len(x)!=0:
