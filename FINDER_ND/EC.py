@@ -161,11 +161,11 @@ class EC:
                     for j in range(self.N):
                         self.a[i][j] = self.a[j][i] = 0
         # t3 = time.time()
-        # b, _ = np.linalg.eig(self.a)
+        b, _ = np.linalg.eig(self.a)
         # t4 = time.time()
-        # self.Lambda = max(b)
+        self.Lambda = max(b)
 
-        self.Lambda = getL(self.a)
+        # self.Lambda = getL(self.a)
         # print(self.Lambda,max(b))
         # t5 = time.time()
         # print(t4-t1,t5-t4)

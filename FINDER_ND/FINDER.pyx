@@ -725,12 +725,12 @@ class FINDER:
             #get_ec=time.time()
             #print("get ec: ",get_ec-get_g)
 
-            s  = ec.HDG()
+            s  = ec.LDG()
 
             #get_hdg=time.time()
             #print("get hdg: ",get_hdg-get_ec)
 
-            s2 = ec.FINDER(sol)
+            s2 = ec.FINDER_MAX(sol)
 
             #get_finder=time.time()
             #print("get finder: ",get_finder-get_hdg)
@@ -742,7 +742,7 @@ class FINDER:
                 # print("Findit")
             if s.Cost>s2.Cost:
                 ge = ge + 1
-            # print("ldg cost: ",s.Cost,"FINDER cost: ",s2.Cost)
+            print("ldg cost: ",s.Cost,"FINDER cost: ",s2.Cost)
             # t2 = time.time()
             # print("cost hdg %d cost FINDER %d"%(s.Cost,s2.Cost))
         self.ClearTestGraphs()

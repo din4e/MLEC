@@ -272,6 +272,7 @@ bool MvcEnv::isTerminal()
 
 double MvcEnv::getReward() // -GCC()/(nsize*nsize)
 {
+    //printf("%lf\n",(double)getMaxConnectedNodesNum()/(graph->num_nodes*graph->num_nodes));
     return -(double)getMaxConnectedNodesNum()/(graph->num_nodes*graph->num_nodes);
 }
 

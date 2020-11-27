@@ -15,7 +15,7 @@ def main():
     # data_test_name = ['30-50', '50-100']
     # data_test_name=['400-500']
     
-    model_file = 'models/nrange_30_50_iter_78000.ckpt'
+    model_file = 'models/nrange_30_50_iter_528600.ckpt'
     file_path  = 'results/FINDER_ND/synthetic'
     
     if not os.path.exists('results/FINDER_ND'):
@@ -27,8 +27,8 @@ def main():
         for i in range(len(data_test_name)):
             data_test = data_test_path + data_test_name[i]
             le, eq, ge = dqn.getGraphAndSol(data_test, model_file)
-            print("%s better case %.2f worse case %.2f"%(data_test_name[i],1.0*ge/100,1.0*le/100))
-            fout.write("%s better case %.2f worse case %.2f\n"%(data_test_name[i],1.0*ge/100,1.0*le/100))
+            print("%s better case %.2f worse case %.2f"%(data_test_name[i],1.0*le/100,1.0*ge/100))
+            fout.write("%s better case %.2f worse case %.2f\n"%(data_test_name[i],1.0*le/100,1.0*ge/100))
             fout.flush()
 
 if __name__=="__main__":
