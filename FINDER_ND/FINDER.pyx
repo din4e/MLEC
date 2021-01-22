@@ -700,10 +700,12 @@ class FINDER:
 
         eq, le, ge = 0, 0, 0
         # for i in range(n_test):
+        lhdg = []
+        ldqn = []
+        ans = []
         for i in tqdm(range(n_test)):
             #t1 = time.time()
             g_path = '%s/'%data_test + 'g_%d'%i
-            
             #gen_net =time.time()
             #print("gen networkx g",gen_net-t1)
 
@@ -720,17 +722,18 @@ class FINDER:
             #get_g=time.time()
             #print("get ec g: ",get_g-get_sol)
 
-            ec = EC.EC(a, ec_g.Lambda * 0.3)
+            ec = EC.EC(a, ec_g.Lambda * 0.5)
+            # ec = EC.EC(a, 1)
 
             #get_ec=time.time()
             #print("get ec: ",get_ec-get_g)
 
-            s  = ec.LDG()
+            s  = ec.HDG()
 
             #get_hdg=time.time()
             #print("get hdg: ",get_hdg-get_ec)
 
-            s2 = ec.FINDER_MAX(sol)
+            s2 = ec.FINDER(sol)
 
             #get_finder=time.time()
             #print("get finder: ",get_finder-get_hdg)
@@ -742,11 +745,12 @@ class FINDER:
                 # print("Findit")
             if s.Cost>s2.Cost:
                 ge = ge + 1
-            print("ldg cost: ",s.Cost,"FINDER cost: ",s2.Cost)
+            ans.append([s.Cost,s2.Cost])
+            # print("ldg cost: ",s.Cost,"FINDER cost: ",s2.Cost)
             # t2 = time.time()
             # print("cost hdg %d cost FINDER %d"%(s.Cost,s2.Cost))
         self.ClearTestGraphs()
-        return le,eq,ge
+        return le,eq,ge,ans
 
     def EvaluateRealData(self, model_file, data_test, save_dir, stepRatio=0.0025):  #测试真实数据
         cdef double solution_time = 0.0
